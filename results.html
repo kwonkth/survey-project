@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설문 결과 분석 - Fantasy Quest</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        .results-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .results-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .survey-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .stat-box {
+            text-align: center;
+            padding: 1rem;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4a6baf;
+            margin-bottom: 0.5rem;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .result-card {
+            margin-bottom: 2.5rem;
+            padding: 1.5rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .result-card h2 {
+            color: #333;
+            margin-top: 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        .chart-container {
+            position: relative;
+            margin: 25px 0;
+            height: 300px;
+        }
+        .response-count {
+            text-align: right;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .back-to-dashboard {
+            display: block;
+            width: 200px;
+            margin: 3rem auto 0;
+            padding: 12px;
+            text-align: center;
+            background-color: #4a6baf;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        .back-to-dashboard:hover {
+            background-color: #3a5a9a;
+            text-decoration: none;
+        }
+        .insight-card {
+            background: #f8f9fa;
+            border-left: 4px solid #4a6baf;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .insight-card h4 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .insight-card p {
+            margin-bottom: 0;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="results-container">
+            <div class="results-header">
+                <h1>마법의 퀘스트 설문 결과 분석</h1>
+                <p>총 78명이 참여한 설문조사의 상세 결과입니다. (마지막 업데이트: 2023년 11월 6일)</p>
+            </div>
+            
+            <div class="survey-stats">
+                <div class="stat-box">
+                    <div class="stat-value">78</div>
+                    <div class="stat-label">총 응답자 수</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">92%</div>
+                    <div class="stat-label">완료율</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">4.7/5</div>
+                    <div class="stat-label">평균 만족도</div>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h2>1. 현재 마법사 레벨은 어떻게 되시나요?</h2>
+                <div class="chart-container">
+                    <canvas id="q1Chart"></canvas>
+                </div>
+                <div class="response-count">총 78명 응답</div>
+                
+                <div class="insight-card">
+                    <h4>📊 인사이트</h4>
+                    <p>응답자 중 42%가 '중급자'로 답변하여 가장 많은 비중을 차지했습니다. 초보자와 고수 비율이 비슷한 것으로 보아, 다양한 수준의 마법사들이 참여한 것으로 보입니다.</p>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h2>2. 선호하는 마법 속성은 무엇인가요? (중복 선택 가능)</h2>
+                <div class="chart-container">
+                    <canvas id="q2Chart"></canvas>
+                </div>
+                <div class="response-count">총 78명 응답 (중복 응답 포함)</div>
+                
+                <div class="insight-card">
+                    <h4>🔥 인기 속성 분석</h4>
+                    <p>불 속성이 45%로 가장 선호도가 높으며, 바람 속성(30%)이 그 뒤를 이었습니다. 흥미롭게도 땅 속성(10%)은 상대적으로 낮은 선호도를 보였습니다.</p>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h2>3. 하루 평균 마법 연습 시간은 얼마나 되시나요?</h2>
+                <div class="chart-container">
+                    <canvas id="q3Chart"></canvas>
+                </div>
+                <div class="response-count">총 78명 응답</div>
+            </div>
+            
+            <div class="result-card">
+                <h2>4. 마법 퀘스트에 참여하는 주된 목적은 무엇인가요?</h2>
+                <div class="chart-container">
+                    <canvas id="q4Chart"></canvas>
+                </div>
+                <div class="response-count">총 78명 응답 (중복 응답 가능)</div>
+            </div>
+            
+            <div class="insight-card">
+                <h4>💡 종합 분석</h4>
+                <p>이 설문을 통해 대부분의 마법사들이 주 2-3회 정도 마법 퀘스트에 참여하며, 대부분이 '재미와 즐거움'을 주된 목적으로 하고 있음을 알 수 있었습니다. 특히 주말 저녁 시간대에 참여율이 높은 것으로 나타나, 향후 이벤트 기획 시 참고할 만한 중요한 인사이트를 얻을 수 있었습니다.</p>
+            </div>
+            
+            <a href="index.html" class="back-to-dashboard">대시보드로 돌아가기</a>
+        </div>
+    </div>
+
+    <script>
+        // Demo data for survey results
+        document.addEventListener('DOMContentLoaded', function() {
+            // Register the datalabels plugin
+            Chart.register(ChartDataLabels);
+            
+            // Question 1: Wizard Level (Bar Chart)
+            const ctx1 = document.getElementById('q1Chart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['초보자 (1-3레벨)', '중급자 (4-7레벨)', '고수 (8-10레벨)', '마스터 (10+ 레벨)'],
+                    datasets: [{
+                        label: '응답자 수',
+                        data: [18, 33, 21, 6],
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 159, 64, 0.7)',
+                            'rgba(255, 99, 132, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: Math.round,
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 40,
+                            ticks: {
+                                stepSize: 5
+                            },
+                            grid: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+
+            // Question 2: Magic Element (Pie Chart)
+            const ctx2 = document.getElementById('q2Chart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'pie',
+                data: {
+                    labels: ['불 (45%)', '물 (28%)', '바람 (30%)', '땅 (10%)', '번개 (22%)', '얼음 (18%)'],
+                    datasets: [{
+                        data: [45, 28, 30, 10, 22, 18],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(153, 102, 255, 0.7)',
+                            'rgba(199, 199, 199, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(199, 199, 199, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw}%`;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            formatter: (value) => {
+                                return value > 10 ? value + '%' : '';
+                            },
+                            color: '#fff',
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    layout: {
+                        padding: 20
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+
+            // Question 3: Daily Practice Time (Horizontal Bar)
+            const ctx3 = document.getElementById('q3Chart').getContext('2d');
+            new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: ['30분 미만', '30분~1시간', '1~2시간', '2~3시간', '3시간 이상'],
+                    datasets: [{
+                        label: '응답자 수',
+                        data: [8, 25, 32, 10, 3],
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'end',
+                            color: '#333',
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 35,
+                            grid: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+
+            // Question 4: Purpose of Participation (Radar Chart)
+            const ctx4 = document.getElementById('q4Chart').getContext('2d');
+            new Chart(ctx4, {
+                type: 'radar',
+                data: {
+                    labels: ['마법 실력 향상', '재미와 즐거움', '커뮤니티 참여', '보상 획득', '스토리 진행'],
+                    datasets: [{
+                        label: '중요도 (1-5점)',
+                        data: [4.2, 4.8, 3.5, 3.8, 4.1],
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 5,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}/5`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Add animation to cards on scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = 1;
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+            
+            document.querySelectorAll('.result-card, .insight-card').forEach((card, index) => {
+                card.style.opacity = 0;
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = `opacity 0.5s ease ${index * 0.1}s, transform 0.5s ease ${index * 0.1}s`;
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

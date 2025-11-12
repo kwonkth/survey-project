@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Quest Survey Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="mobile-container">
+        <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">퀘스트 설문 마법사</div>
+            <nav>
+                <button class="nav-btn">설문 리스트</button>
+                <button class="nav-btn">결과 분석</button>
+                <button class="nav-btn">설정</button>
+            </nav>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="dashboard">
+            <h1>마법의 설문 제작소에 오신 것을 환영합니다!</h1>
+            <div class="dashboard-grid">
+                <div class="dashboard-card new-survey">
+                    <h2>새 설문조사 만들기</h2>
+                    <p>마법의 퀘스트를 시작해보세요!</p>
+                    <button id="createNewSurvey" class="primary-btn">+ 새 퀘스트 시작</button>
+                </div>
+                
+                <div class="dashboard-card in-progress">
+                    <h3>작업 중인 퀘스트</h3>
+                    <div class="quest-item">
+                        <div class="quest-avatar">👨‍🏫</div>
+                        <div class="quest-info">
+                            <h4>마법 학교 입학 시험</h4>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 65%"></div>
+                            </div>
+                            <span>65% 완료</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card stats">
+                    <h3>퀘스트 통계</h3>
+                    <div class="stat-item">
+                        <span class="stat-value">12</span>
+                        <span class="stat-label">완료된 퀘스트</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">87%</span>
+                        <span class="stat-label">평균 완료율</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Survey Creation Modal (initially hidden) -->
+        <div id="surveyModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div class="creation-steps">
+                    <div class="step active" data-step="1">1. 퀘스트 기본 정보</div>
+                    <div class="step" data-step="2">2. 질문-응답 디자인</div>
+                    <div class="step" data-step="3">3. 보상 설정</div>
+                </div>
+                
+                <div id="step1" class="step-content active">
+                    <h2>퀘스트 기본 정보</h2>
+                    <div class="form-group">
+                        <label>퀘스트 제목</label>
+                        <input type="text" placeholder="예: 마법 학교 입학 시험" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>퀘스트 설명</label>
+                        <textarea class="form-control" rows="3" placeholder="이 퀘스트에 대한 간단한 설명을 입력하세요"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>NPC 아바타 선택</label>
+                        <div class="avatar-selection">
+                            <div class="avatar-option selected">
+                                <img src="https://via.placeholder.com/80" alt="Wizard">
+                                <span>마법사</span>
+                            </div>
+                            <div class="avatar-option">
+                                <img src="https://via.placeholder.com/80" alt="Knight">
+                                <span>기사</span>
+                            </div>
+                            <div class="avatar-option">
+                                <img src="https://via.placeholder.com/80" alt="Merchant">
+                                <span>상인</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>배경 테마 선택</label>
+                        <div class="theme-selection">
+                            <div class="theme-option selected">
+                                <div class="theme-preview forest"></div>
+                                <span>신비한 숲</span>
+                            </div>
+                            <div class="theme-option">
+                                <div class="theme-preview castle"></div>
+                                <span>고대 성</span>
+                            </div>
+                            <div class="theme-option">
+                                <div class="theme-preview dungeon"></div>
+                                <span>어두운 던전</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-secondary">취소</button>
+                        <button class="btn btn-primary next-step" data-next="2">다음 단계로</button>
+                    </div>
+                </div>
+
+                <!-- Step 2 Content (initially hidden) -->
+                <div id="step2" class="step-content">
+                    <h2>질문-응답 디자인</h2>
+                    <div class="question-block">
+                        <div class="question-header">
+                            <h3>Chapter 1: 마법의 시작</h3>
+                            <div class="question-actions">
+                                <button class="btn-icon" title="배경 변경">🎨</button>
+                                <button class="btn-icon" title="삭제">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>NPC 대사 (질문)</label>
+                            <textarea class="form-control" rows="2" placeholder="예: 안녕하세요, 모험가님! 마법 학교에 오신 것을 환영합니다. 어떤 마법에 관심이 있나요?"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>효과음</label>
+                            <select class="form-control">
+                                <option>기본 효과음</option>
+                                <option>마법 효과음</option>
+                                <option>전투 효과음</option>
+                                <option>없음</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>답변 유형</label>
+                            <select class="form-control">
+                                <option>객관식 (단일 선택)</option>
+                                <option>주관식 (자유 기록)</option>
+                                <option>척도형 (5점/7점)</option>
+                            </select>
+                        </div>
+                        <div class="answer-options">
+                            <div class="answer-option">
+                                <input type="text" class="form-control" value="불 마법" placeholder="선택지 1">
+                                <button class="btn-icon">🗑️</button>
+                            </div>
+                            <div class="answer-option">
+                                <input type="text" class="form-control" value="얼음 마법" placeholder="선택지 2">
+                                <button class="btn-icon">🗑️</button>
+                            </div>
+                            <button class="btn-text">+ 선택지 추가</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline add-chapter">+ 새 챕터 추가</button>
+                    <div class="form-actions">
+                        <button class="btn btn-secondary prev-step" data-prev="1">이전 단계</button>
+                        <button class="btn btn-primary next-step" data-next="3">다음 단계로</button>
+                    </div>
+                </div>
+
+                <!-- Step 3 Content (initially hidden) -->
+                <div id="step3" class="step-content">
+                    <h2>퀘스트 보상 설정</h2>
+                    <div class="form-group">
+                        <label>마무리 메시지</label>
+                        <textarea class="form-control" rows="3" placeholder="퀘스트를 완료한 모험가들에게 보여줄 메시지를 입력하세요">축하합니다! 퀘스트를 성공적으로 완료하셨습니다!</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>획득 아이템</label>
+                        <div class="reward-card">
+                            <img src="https://via.placeholder.com/100" alt="보상 아이템" class="reward-image">
+                            <div class="reward-details">
+                                <input type="text" class="form-control" value="마법의 두루마리" placeholder="아이템 이름">
+                                <textarea class="form-control" rows="2" placeholder="아이템 설명">이 두루마리는 마법 학교의 지식을 담고 있습니다.</textarea>
+                                <button class="btn-text">이미지 업로드</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" checked> 익명 응답 허용
+                        </label>
+                        <label>
+                            <input type="checkbox"> 응답 기록 저장
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-secondary prev-step" data-prev="2">이전 단계</button>
+                        <button id="completeSurvey" class="btn-primary">퀘스트 완성하기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion Modal (initially hidden) -->
+        <div id="completionModal" class="modal">
+            <div class="modal-content completion">
+                <h2>🎉 퀘스트가 완성되었습니다!</h2>
+                <p>아래 링크를 통해 퀘스트를 공유하세요.</p>
+                <div class="share-link">
+                    <input type="text" value="https://surveyquest.com/q/ABC1234" readonly>
+                    <button class="btn-icon" title="링크 복사">📋</button>
+                </div>
+                <div class="qr-code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://surveyquest.com/q/ABC1234" alt="QR Code">
+                    <p>QR 코드로 공유하기</p>
+                </div>
+                <div class="completion-actions">
+                    <button class="btn btn-secondary" id="closeCompletion">닫기</button>
+                    <a href="results.html" class="btn btn-primary" id="viewResults">결과 분석 보기</a>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Novel Survey</title>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Gowun Batang', serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f2f5;
+        }
+        
+        .mobile-container {
+            width: 100%;
+            max-width: 1080px;
+            height: 100%;
+            max-height: 1920px;
+            position: relative;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        #background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('/images/배경.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 1;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        
+        #text-box {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 10px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 80%;
+        }
+        
+        #question-text {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            min-height: 80px;
+        }
+        
+        #options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .option-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            text-align: left;
+            transition: all 0.3s ease;
+        }
+        
+        .option-btn:hover {
+            background: #fff;
+            transform: translateX(10px);
+        }
+        
+        #progress {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        #character-name {
+            font-weight: bold;
+            color: #ffcc00;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-container">
+        <div id="background"></div>
+        <div id="game-container" style="position: relative; z-index: 2;">
+            <div id="progress">질문 1/5</div>
+            <div id="text-box">
+                <div id="character-name">설문조사</div>
+                <div id="question-text">안녕하세요! 설문에 참여해주셔서 감사합니다.</div>
+                <div id="options-container">
+                    <!-- Options will be added here dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample survey data - in a real app, this would come from the URL parameters
+        const surveyData = {
+            title: "모험의 시작",
+            description: "당신의 모험을 시작해보세요!",
+            questions: [
+                {
+                    text: "당신의 이름은 무엇인가요?",
+                    type: "text",
+                    required: true
+                },
+                {
+                    text: "어떤 모험을 떠나고 싶으신가요?",
+                    type: "radio",
+                    required: true,
+                    options: [
+                        "신비한 마법의 숲 탐험",
+                        "고대 유적 발굴 여행",
+                        "우주 여행"
+                    ]
+                },
+                {
+                    text: "어떤 능력을 가지고 싶으신가요? (중복 선택 가능)",
+                    type: "checkbox",
+                    required: false,
+                    options: [
+                        "투명해지기",
+                        "시간을 멈추기",
+                        "생각 읽기",
+                        "순간이동"
+                    ]
+                },
+                {
+                    text: "이 모험에서 가장 기대되는 점은 무엇인가요?",
+                    type: "text",
+                    required: true
+                }
+            ]
+        };
+
+        // Game state
+        let currentQuestionIndex = 0;
+        const answers = [];
+
+        // DOM elements
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const progressText = document.getElementById('progress');
+        const characterName = document.getElementById('character-name');
+
+        // Initialize the game
+        function initGame() {
+            showQuestion(0);
+        }
+
+        // Show question at the given index
+        function showQuestion(index) {
+            if (index >= surveyData.questions.length) {
+                // All questions answered
+                endSurvey();
+                return;
+            }
+
+            const question = surveyData.questions[index];
+            currentQuestionIndex = index;
+            
+            // Update progress
+            progressText.textContent = `질문 ${index + 1}/${surveyData.questions.length}`;
+            
+            // Update question text
+            questionText.textContent = question.text;
+            
+            // Clear previous options
+            optionsContainer.innerHTML = '';
+            
+            // Add options based on question type
+            if (question.type === 'text') {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = '답변을 입력해주세요...';
+                input.className = 'option-btn';
+                input.style.width = '100%';
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        saveAnswer(input.value);
+                        showQuestion(index + 1);
+                    }
+                });
+                
+                const nextBtn = document.createElement('button');
+                nextBtn.textContent = '다음';
+                nextBtn.className = 'option-btn';
+                nextBtn.style.marginTop = '10px';
+                nextBtn.onclick = function() {
+                    if (question.required && !input.value.trim()) {
+                        alert('답변을 입력해주세요.');
+                        return;
+                    }
+                    saveAnswer(input.value);
+                    showQuestion(index + 1);
+                };
+                
+                optionsContainer.appendChild(input);
+                optionsContainer.appendChild(nextBtn);
+                input.focus();
+                
+            } else if (question.type === 'radio' || question.type === 'checkbox') {
+                question.options.forEach((option, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn';
+                    btn.textContent = option;
+                    btn.onclick = function() {
+                        if (question.type === 'radio') {
+                            // For radio buttons, immediately go to next question
+                            saveAnswer(option);
+                            setTimeout(() => showQuestion(index + 1), 300);
+                        } else {
+                            // For checkboxes, toggle selection
+                            btn.classList.toggle('selected');
+                            if (btn.classList.contains('selected')) {
+                                btn.style.background = '#4CAF50';
+                                btn.style.color = 'white';
+                            } else {
+                                btn.style.background = 'rgba(255, 255, 255, 0.9)';
+                                btn.style.color = '#333';
+                            }
+                        }
+                    };
+                    optionsContainer.appendChild(btn);
+                });
+                
+                // Add next button for checkbox questions
+                if (question.type === 'checkbox') {
+                    const nextBtn = document.createElement('button');
+                    nextBtn.textContent = '다음';
+                    nextBtn.className = 'option-btn';
+                    nextBtn.style.marginTop = '10px';
+                    nextBtn.style.background = '#2196F3';
+                    nextBtn.style.color = 'white';
+                    nextBtn.onclick = function() {
+                        const selectedOptions = [];
+                        const buttons = optionsContainer.querySelectorAll('.option-btn');
+                        buttons.forEach(btn => {
+                            if (btn.classList.contains('selected')) {
+                                selectedOptions.push(btn.textContent);
+                            }
+                        });
+                        
+                        if (question.required && selectedOptions.length === 0) {
+                            alert('하나 이상 선택해주세요.');
+                            return;
+                        }
+                        
+                        saveAnswer(selectedOptions.join(', '));
+                        showQuestion(index + 1);
+                    };
+                    optionsContainer.appendChild(nextBtn);
+                }
+            }
+            
+            // Add animation
+            questionText.style.animation = 'none';
+            questionText.offsetHeight; // Trigger reflow
+            questionText.style.animation = 'fadeIn 0.5s ease-in-out';
+        }
+
+        // Save answer to the answers array
+        function saveAnswer(answer) {
+            answers[currentQuestionIndex] = answer;
+            console.log('Current answers:', answers);
+        }
+
+        // Show completion screen
+        function endSurvey() {
+            questionText.innerHTML = '모든 질문에 답변해주셔서 감사합니다!<br><br>당신의 모험이 곧 시작됩니다...';
+            optionsContainer.innerHTML = '';
+            
+            // In a real app, you would submit the answers to a server here
+            console.log('Survey completed. Answers:', answers);
+            
+            // Show completion animation
+            setTimeout(() => {
+                window.location.href = 'results.html';
+            }, 3000);
+        }
+
+        // Start the game when the page loads
+        document.addEventListener('DOMContentLoaded', initGame);
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .selected {
+            background: #4CAF50 !important;
+            color: white !important;
+        }
+    </style>
+</body>
+</html>
