@@ -1,0 +1,34 @@
+{
+  "system_rules": [
+    "JSON만 출력",
+    "문항 ID는 q_1, q_2 … 형식",
+    "type은 radio | checkbox | text 셋 중 하나",
+    "options는 문자열 배열만 허용",
+    "story_context는 분위기 요약만 포함",
+    "필수 문항은 required=true",
+    "이름 문항은 required=false"
+  ],
+  "style_template_rules": [
+    "style_id.json 파일이 존재하면 mood, tone, keywords 사용",
+    "프롬프트에서 style과 병합하여 스토리 분위기를 자동 조정"
+  ],
+  "output_format": {
+    "title": "string",
+    "description": "string",
+    "questions": [
+      {
+        "id": "q_1",
+        "order": 1,
+        "text": "string",
+        "type": "radio | checkbox | text",
+        "required": true,
+        "options": ["A", "B"]
+      }
+    ],
+    "story_context": {
+      "mood": "string",
+      "tone": "string",
+      "keywords": ["string"]
+    }
+  }
+}

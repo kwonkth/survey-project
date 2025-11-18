@@ -41,7 +41,8 @@ export async function onRequestPost({ request, env }) {
       } catch (_) {}
     }
 
-    const SYSTEM_PROMPT = buildSystemPrompt();
+    const promptConfig = await loadPromptConfig(request);
+    const SYSTEM_PROMPT = buildSystemPrompt(promptConfig);
     const userContent = buildUserPrompt({
       topic,
       questionCount,
@@ -99,34 +100,25 @@ export async function onRequestPost({ request, env }) {
   }
 }
 
-function buildSystemPrompt() {
-  return [
+function buildSystemPrompt(promptConfig) {
+  const rules = Array.isArray(promptConfig?.system_rules) ? promptConfig.system_rules : [];
+  const styleRules = Array.isArray(promptConfig?.style_template_rules) ? promptConfig.style_template_rules : [];
+  const baseLines = [
     "당신은 '스토리 기반 설문조사 생성 전문 LLM'입니다.",
     '출력은 반드시 JSON 하나만 반환해야 하며, 설명 문장은 출력하지 않습니다.',
-    '',
-    '출력 형식 규칙 (절대 어기지 말 것):',
-    '1) 전체 출력은 JSON 객체 하나만 반환한다.',
-    '2) keys: title, description, questions, story_context',
-    '3) questions는 배열이며 각 항목은 id, order, text, type, required, options 필드를 가진다.',
-    '   - id: "q_1", "q_2" 형식',
-    '   - order: 1부터 시작하는 숫자',
-    '   - text: 질문 문장 (한국어)',
-    '   - type: "radio" | "checkbox" | "text"',
-    '   - required: true | false',
-    '   - options: type이 radio/checkbox일 때 보기 문자열 배열, text일 때 []',
-    '4) story_context는 mood, tone, keywords 배열을 포함한다.',
-    '5) JSON 밖에 다른 문장, 설명, 코드블록 기호 등을 절대 출력하지 않는다.',
-    '',
-    'type 결정 규칙:',
-    '- "2지선다/3지선다/4지선다" 등 단일 선택: type = "radio"',
-    '- "복수 선택" 또는 "중복 가능": type = "checkbox"',
-    '- 그 밖의 서술형: type = "text"',
-    '',
-    'options 규칙:',
-    '- radio/checkbox일 때만 보기 문자열 목록을 넣고, text일 때 options는 빈 배열',
-    '',
-    '절대 JSON 형식 외의 설명을 출력하지 말 것.'
-  ].join('\n');
+    ''
+  ];
+
+  if (rules.length) {
+    baseLines.push('출력 규칙:', ...rules.map((rule, idx) => `${idx + 1}. ${rule}`), '');
+  }
+
+  if (styleRules.length) {
+    baseLines.push('스타일 템플릿 적용 규칙:', ...styleRules, '');
+  }
+
+  baseLines.push('절대 JSON 형식 외의 설명을 출력하지 말 것.');
+  return baseLines.join('\n');
 }
 
 function buildUserPrompt({ topic, questionCount, style, styleTemplate, includeNameQuestion, questionTypeMode, mandatoryQuestions }) {
@@ -156,6 +148,10 @@ function buildUserPrompt({ topic, questionCount, style, styleTemplate, includeNa
     '- mode = fixed_four : 모든 객관식 문항은 4지선다 (radio)로 생성',
     '- mode = mixed : 객관식과 서술형을 균형 있게 섞어 구성',
     '',
+    '각 문항은 required 값을 반드시 포함한다.',
+    'includeNameQuestion=true 인 경우 첫 번째 문항은 항상 이름 질문이며 required=false 로 설정한다.',
+    '그 외 문항은 기본적으로 required=true 로 설정한다.',
+    '',
     '필수 포함 질문과 입력 정보를 모두 반영하여 일관된 JSON 설문을 생성하세요.',
     '응답은 반드시 JSON 객체 하나만 출력해야 하며, 다른 문장은 절대 포함하지 마세요.'
   ].join('\n');
@@ -172,22 +168,61 @@ function normalizeSurvey(modelOut, { includeNameQuestion }) {
     const id = q?.id ? String(q.id) : `q_${idx + 1}`;
     const order = Number.isFinite(q?.order) ? Number(q.order) : idx + 1;
     const text = String(q?.text || '').trim() || `문항 ${idx + 1}`;
-    let type = String(q?.type || 'text');
+    let type = String(q?.type || 'text').toLowerCase();
     if (/checkbox|다중|복수/.test(type)) type = 'checkbox';
     else if (/radio|단일|객관식/.test(type)) type = 'radio';
     else type = 'text';
-    const required = q?.required !== false;
-    const options = Array.isArray(q?.options) ? q.options.map(o => String(o)).filter(Boolean) : [];
+    let required = typeof q?.required === 'boolean' ? q.required : true;
+    let options = Array.isArray(q?.options) ? q.options.map(o => String(o)).filter(Boolean) : [];
+    if (type === 'text') {
+      options = [];
+    } else if (!options.length) {
+      options = type === 'checkbox' || type === 'radio' ? ['예', '아니오'] : [];
+    }
     return { id, order, text, type, required, options };
   });
 
   // Ensure sequential order and ids q_1..
   questions = questions.map((q, i) => ({ ...q, id: `q_${i + 1}`, order: i + 1 }));
 
+  const hasNameQ = questions.some(q => q.id === 'q_name' || /이름/.test(q.text));
   if (includeNameQuestion) {
-    const nameQ = { id: 'q_name', order: 1, text: '모험가여, 당신의 이름을 알려주세요.', type: 'text', required: false, options: [] };
-    questions = [nameQ, ...questions.map((q, i) => ({ ...q, order: i + 2 }))];
+    if (hasNameQ) {
+      const idx = questions.findIndex(q => q.id === 'q_name' || /이름/.test(q.text));
+      if (idx > 0) {
+        const [nameQuestion] = questions.splice(idx, 1);
+        questions.unshift({ ...nameQuestion, id: 'q_name', text: nameQuestion.text, required: false, type: 'text', options: [] });
+      } else if (idx === 0) {
+        questions[0] = { ...questions[0], id: 'q_name', type: 'text', required: false, options: [] };
+      }
+    } else {
+      const nameQ = { id: 'q_name', order: 1, text: '모험가여, 당신의 이름을 알려주세요.', type: 'text', required: false, options: [] };
+      questions = [nameQ, ...questions];
+    }
   }
 
+  // Reassign ids/orders and enforce required defaults
+  questions = questions.map((q, i) => ({
+    ...q,
+    id: q.id === 'q_name' ? 'q_name' : `q_${q.id === 'q_name' ? 'name' : i + 1}`,
+    order: i + 1,
+    required: q.id === 'q_name' ? false : (typeof q.required === 'boolean' ? q.required : true),
+    options: q.type === 'text' ? [] : q.options
+  }));
+
+  // Ensure unique ids
+  questions = questions.map((q, idx) => ({ ...q, id: q.id === 'q_name' ? 'q_name' : `q_${idx + 1}` }));
+
   return { title, description, questions, story_context };
+}
+
+async function loadPromptConfig(request) {
+  try {
+    const promptURL = new URL('/prompts/survey_generation.json', request.url).toString();
+    const res = await fetch(promptURL);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (_) {}
+  return null;
 }
