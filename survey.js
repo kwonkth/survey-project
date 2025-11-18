@@ -22,6 +22,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // 기존 설문에서 저장된 한글 라벨 등의 type 값을 'radio' | 'checkbox' | 'text' 로 정규화
+    function normalizeQuestionType(raw) {
+        const t = String(raw || '').toLowerCase();
+        if (t.includes('checkbox') || t.includes('체크') || t.includes('복수') || t.includes('다중')) return 'checkbox';
+        if (t.includes('radio') || t.includes('객관') || t.includes('단일') || t.includes('선다')) return 'radio';
+        if (t.includes('text') || t.includes('주관') || t.includes('서술')) return 'text';
+        // 알 수 없는 타입은 기본적으로 텍스트 질문으로 처리
+        return 'text';
+    }
+
     const params = new URLSearchParams(window.location.search);
     const surveyId = params.get('surveyId');
     const storyFile = params.get('storyFile');
@@ -105,16 +115,20 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (_) {}
 
         const isLast = state.currentQuestionIndex === state.survey.questions.length - 1;
+        const qType = normalizeQuestionType(question.type);
+        // 정규화된 타입을 다시 question.type 에도 반영해 두면 이후 로직/analytics에서도 일관되게 사용 가능
+        question.type = qType;
 
-        if (question.type === 'radio' || question.type === 'checkbox') {
-            question.options.forEach(optionText => {
+        if (qType === 'radio' || qType === 'checkbox') {
+            const opts = Array.isArray(question.options) ? question.options : [];
+            opts.forEach(optionText => {
                 const button = document.createElement('button');
                 button.className = 'option-btn';
                 button.textContent = optionText;
-                button.onclick = () => handleOptionClick(optionText, question.type, button, optionsContainer);
+                button.onclick = () => handleOptionClick(optionText, qType, button, optionsContainer);
                 optionsContainer.appendChild(button);
             });
-        } else if (question.type === 'text') {
+        } else if (qType === 'text') {
             const textInput = document.createElement('input');
             textInput.type = 'text';
             textInput.className = 'text-input';
