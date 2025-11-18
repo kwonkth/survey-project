@@ -13,6 +13,7 @@ let surveyModal, completionModal,
 
 let lastCreatedSurveyId = '';
 let currentSurveyId = null;
+let aiGeneratedSurvey = null;
 
 function ensureDefaultNameQuestion() {
     if (!questionBlocksContainer) return;
@@ -127,15 +128,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const aiGenClose = document.getElementById('aiGenClose');
     const aiGenCancel = document.getElementById('aiGenCancel');
     const aiGenerateBtn = document.getElementById('aiGenerateBtn');
+    const aiSaveBtn = document.getElementById('aiSaveBtn');
+    const aiResetPreviewBtn = document.getElementById('aiResetPreviewBtn');
     const aiTopicInput = document.getElementById('aiTopicInput');
     const aiQuestionCountInput = document.getElementById('aiQuestionCountInput');
+    const aiQuestionTypeSelect = document.getElementById('aiQuestionTypeSelect');
     const aiStyleSelect = document.getElementById('aiStyleSelect');
     const aiIncludeNameInput = document.getElementById('aiIncludeNameInput');
+    const aiPreviewSection = document.getElementById('aiPreviewSection');
+    const aiPreviewTitle = document.getElementById('aiPreviewTitle');
+    const aiPreviewDesc = document.getElementById('aiPreviewDesc');
+    const aiPreviewList = document.getElementById('aiPreviewList');
 
     function openAiModal() {
         if (aiGenModal) {
             aiGenModal.style.display = 'block';
             document.body.style.overflow = 'hidden';
+            resetAiPreview();
         }
     }
 
@@ -143,6 +152,35 @@ document.addEventListener("DOMContentLoaded", () => {
         if (aiGenModal) {
             aiGenModal.style.display = 'none';
             document.body.style.overflow = 'auto';
+            resetAiPreview();
+        }
+    }
+
+    function resetAiPreview() {
+        aiGeneratedSurvey = null;
+        if (aiPreviewSection) {
+            aiPreviewSection.style.display = 'none';
+        }
+        if (aiPreviewTitle) aiPreviewTitle.textContent = '-';
+        if (aiPreviewDesc) aiPreviewDesc.textContent = '-';
+        if (aiPreviewList) aiPreviewList.innerHTML = '';
+        if (aiSaveBtn) {
+            aiSaveBtn.disabled = true;
+            aiSaveBtn.textContent = 'DB 저장 & 링크 생성';
+        }
+    }
+
+    function renderAiPreview(preview) {
+        if (!preview || !aiPreviewSection) return;
+        aiPreviewTitle.textContent = preview.title || '제목 없음';
+        aiPreviewDesc.textContent = preview.description || '설명 없음';
+        const questions = Array.isArray(preview.questions) ? preview.questions : [];
+        aiPreviewList.innerHTML = questions.length
+            ? questions.map(q => `<li>${q.order}. ${q.text}</li>`).join('')
+            : '<li>생성된 문항이 없습니다.</li>';
+        aiPreviewSection.style.display = 'block';
+        if (aiSaveBtn) {
+            aiSaveBtn.disabled = false;
         }
     }
 

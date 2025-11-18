@@ -176,36 +176,82 @@
 
     <!-- AI 설문 생성 모달 -->
     <div id="aiGenModal" class="modal">
-      <div class="modal-content">
-        <span class="close" id="aiGenClose">&times;</span>
-        <h2>AI 설문 생성</h2>
-        <div class="form-group">
-          <label>설문 주제</label>
-          <input type="text" id="aiTopicInput" class="form-control" placeholder="예: 직장인 스트레스 검사" />
+        <div class="modal-content ai-modal">
+            <span class="close" id="aiGenClose">&times;</span>
+            <h2>AI 설문 생성</h2>
+            <p class="ai-modal-desc">단계별 입력 후 AI가 설문을 생성하며, 최종 저장 전에 미리보기를 제공합니다.</p>
+
+            <div class="ai-modal-body">
+                <div class="form-group">
+                    <label>스토리를 포함하여 설문을 진행할까요?</label>
+                    <div class="radio-group" id="aiStoryGroup">
+                        <label class="radio-option">
+                            <input type="radio" name="aiStoryEnabled" value="yes" checked>
+                            네 (스토리 기반 질문)
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="aiStoryEnabled" value="no">
+                            아니오 (일반 설문)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="aiTopicInput">설문의 주제를 입력해주세요.</label>
+                    <input type="text" id="aiTopicInput" class="form-control" placeholder="예: 대학 축제 만족도 조사, 게임 성향 분석 등" />
+                </div>
+
+                <div class="form-group">
+                    <label for="aiQuestionCountInput">원하는 문항 수를 입력해주세요. (5~20, 그 이상도 가능)</label>
+                    <input type="number" id="aiQuestionCountInput" class="form-control" min="5" value="5" />
+                </div>
+
+                <div class="form-group">
+                    <label for="aiQuestionTypeSelect">질문 형식을 선택해주세요.</label>
+                    <select id="aiQuestionTypeSelect" class="form-control">
+                        <option value="2지선다">2지선다 (예/아니오)</option>
+                        <option value="4지선다">4지선다</option>
+                        <option value="서술형">서술형</option>
+                        <option value="혼합" selected>혼합 (AI가 자동으로 구성)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="aiIncludeNameInput" />
+                    <label for="aiIncludeNameInput" style="margin:0;">이름 문항을 포함할까요? (자동으로 맨 앞에 삽입됩니다)</label>
+                </div>
+
+                <div class="form-group">
+                    <label for="aiStyleSelect">분위기 스타일을 선택해주세요.</label>
+                    <select id="aiStyleSelect" class="form-control">
+                        <option value="">기본</option>
+                        <option value="epic_fantasy">장엄한 판타지</option>
+                        <option value="romance">로맨스</option>
+                        <option value="horror">호러</option>
+                        <option value="none">스토리 없음 (일반 설문)</option>
+                    </select>
+                    <div class="form-helper">/styles/{style_id}.json 파일이 있을 경우 해당 템플릿을 함께 반영합니다.</div>
+                </div>
+
+                <div class="ai-preview" id="aiPreviewSection" style="display:none;">
+                    <div class="preview-header">
+                        <h3>생성된 설문 미리보기</h3>
+                        <button class="btn btn-outline" id="aiResetPreviewBtn" type="button">새로 생성</button>
+                    </div>
+                    <div class="preview-body">
+                        <h4 id="aiPreviewTitle">-</h4>
+                        <p id="aiPreviewDesc">-</p>
+                        <ol id="aiPreviewList"></ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions ai-actions">
+                <button class="btn btn-secondary" id="aiGenCancel">취소</button>
+                <button class="btn" id="aiGenerateBtn">AI로 생성</button>
+                <button class="btn btn-primary" id="aiSaveBtn" disabled>DB 저장 & 링크 생성</button>
+            </div>
         </div>
-        <div class="form-group">
-          <label>문항 수 (1~10)</label>
-          <input type="number" id="aiQuestionCountInput" class="form-control" min="1" max="10" value="5" />
-        </div>
-        <div class="form-group">
-          <label>분위기 스타일</label>
-          <select id="aiStyleSelect" class="form-control">
-            <option value="">기본</option>
-            <option value="epic_fantasy">장엄한 판타지</option>
-            <option value="romance">로맨스</option>
-            <option value="horror">호러</option>
-          </select>
-          <div style="font-size:0.85rem;color:#6b7280; margin-top:6px;">/styles/{style_id}.json 이 존재하면 해당 템플릿을 추가 반영합니다.</div>
-        </div>
-        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
-          <input type="checkbox" id="aiIncludeNameInput" />
-          <label for="aiIncludeNameInput" style="margin:0;">이름 문항 포함하기</label>
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-secondary" id="aiGenCancel">취소</button>
-          <button class="btn btn-primary" id="aiGenerateBtn">AI로 생성</button>
-        </div>
-      </div>
     </div>
 
     <script>
