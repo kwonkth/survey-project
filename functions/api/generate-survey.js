@@ -61,13 +61,12 @@ export async function onRequestPost({ request, env }) {
       },
       body: JSON.stringify({
         // Google Gemini 2.0 Flash Thinking via OpenRouter
-        model: 'google/gemini-2.0-flash-thinking-exp',
+        model: 'google/gemini-2.0-flash-thinking',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userContent }
         ],
-        temperature: 0.7,
-        response_format: { type: 'json_object' }
+        temperature: 0.7
       })
     });
 
