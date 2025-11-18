@@ -187,7 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnCsv) btnCsv.addEventListener('click', () => {
       if (!ensureSelected()) return;
       const data = getData();
-      const csv = toCSV(data);
+      // UTF-8 BOM을 붙여서 한글이 깨지지 않도록 함
+      const csv = '\uFEFF' + toCSV(data);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       download(`${safeFilename(data.title || data.surveyId)}_stats.csv`, blob);
     });
@@ -195,8 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnXls) btnXls.addEventListener('click', () => {
       if (!ensureSelected()) return;
       const data = getData();
-      const csv = toCSV(data);
-      // Excel에서도 깨지지 않도록 CSV 포맷 + .csv 확장자로 저장
+      // Excel에서도 깨지지 않도록 UTF-8 BOM이 포함된 CSV를 .csv 확장자로 저장
+      const csv = '\uFEFF' + toCSV(data);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       download(`${safeFilename(data.title || data.surveyId)}_stats_excel.csv`, blob);
     });
