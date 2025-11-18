@@ -217,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showCompletionScreen() {
         const container = document.querySelector('.mobile-container');
+        console.log('[survey] showCompletionScreen called, answers =', state.answers);
         container.innerHTML = `
             <div id="background"></div>
             <div class="completion-screen">
@@ -228,11 +229,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const saveBtn = document.getElementById('saveResultsBtn');
         if (saveBtn) {
+            console.log('[survey] saveResultsBtn click handler attached');
             saveBtn.onclick = finalizeSurvey;
         }
     }
 
     async function finalizeSurvey() {
+        console.log('[survey] finalizeSurvey start, surveyId =', state.survey && state.survey.id, 'answers =', state.answers);
         const saveBtn = document.getElementById('saveResultsBtn');
         if (saveBtn) {
             saveBtn.disabled = true;
@@ -242,18 +245,21 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const created_at = new Date().toISOString();
             const result_id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `r_${Date.now().toString(36)}${Math.random().toString(36).slice(2,8)}`;
-            // answers는 [{questionId, value}] 배열 형태로 저장
-            await API.postResult({
+            const payload = {
                 result_id,
                 survey_id: state.survey.id,
                 answers: state.answers,
                 created_at
-            });
+            };
+            console.log('[survey] about to POST /api/results', payload);
+            // answers는 [{questionId, value}] 배열 형태로 저장
+            await API.postResult(payload);
+            console.log('[survey] POST /api/results success');
             if (saveBtn) {
                 saveBtn.textContent = '저장 완료';
             }
         } catch (e) {
-            console.error('응답 저장 중 오류', e);
+            console.error('[survey] 응답 저장 중 오류', e);
             if (saveBtn) {
                 saveBtn.disabled = false;
                 saveBtn.textContent = '저장하기';
@@ -265,4 +271,5 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.querySelector('.mobile-container');
         container.innerHTML = `<div class="error-screen"><h2>오류</h2><p>${message}</p></div>`;
     }
+    
 });
