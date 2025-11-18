@@ -234,10 +234,12 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('[survey] showCompletionScreen called, answers =', state.answers);
         container.innerHTML = `
             <div id="background"></div>
-            <div class="completion-screen">
-                <h2>참여해주셔서 감사합니다.</h2>
-                <p>모든 답변이 준비되었습니다. 아래 버튼을 눌러 저장을 완료하세요.</p>
-                <button id="saveResultsBtn" class="submit-btn">저장하기</button>
+            <div id="content">
+                <div class="completion-screen">
+                    <h2>참여해주셔서 감사합니다.</h2>
+                    <p>모든 답변이 준비되었습니다. 아래 버튼을 눌러 저장을 완료하세요.</p>
+                    <button id="saveResultsBtn" class="submit-btn">저장하기</button>
+                </div>
             </div>
         `;
 
