@@ -245,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.setAttribute('data-survey-id', survey.id);
 
         const statusText = survey.status === 'draft' ? '작성 중' : 
-                          survey.status === 'active' ? '배포 중' : '응답 종료';
+                          survey.status === 'published' ? '배포 중' : '응답 종료';
         const statusClass = `status-${survey.status}`;
 
         card.innerHTML = `
@@ -270,7 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div class="survey-actions">
-                <button class="btn-survey-action" onclick="endDeployment('${survey.id}')">배포 종료</button>
+                ${survey.status === 'published'
+                    ? `<button class="btn-survey-action" data-action="stop" data-id="${survey.id}">배포 종료</button>`
+                    : `<button class="btn-survey-action" data-action="republish" data-id="${survey.id}">재배포</button>`}
                 <button class="btn-survey-action" onclick="viewResults('${survey.id}')">결과</button>
                 <button class="btn-survey-action" onclick="shareSurvey('${survey.id}')">공유</button>
             </div>
@@ -572,6 +574,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const survey = state.surveyMap.get(surveyId);
         if (!survey) return;
 
+        if (survey.status !== 'published') {
+            alert('⚠️ 이 설문은 이미 종료되었거나 아직 배포되지 않아 공유할 수 없습니다.');
+            return;
+        }
+
         const shareUrl = createShareUrl(survey);
 
         // Populate and show dashboard share modal (same UX as completion modal)
@@ -638,10 +645,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function endDeployment(surveyId) {
         try {
-            await API.updateSurveyStatus(surveyId, 'closed');
+            await API.updateSurveyStatus(surveyId, 'archived');
             const s = state.surveyMap.get(surveyId);
             if (s) {
-                s.status = 'closed';
+                s.status = 'archived';
                 s.updatedAt = new Date().toISOString();
             }
             renderFolders();
@@ -720,6 +727,43 @@ document.addEventListener('DOMContentLoaded', () => {
     window.renameFolder = renameFolder;
     window.deleteFolder = deleteFolder;
     // exports removed
+
+    // 배포 종료 / 재배포 버튼 클릭 처리 (이벤트 위임)
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+
+        const surveyId = btn.dataset.id;
+        const action = btn.dataset.action;
+        if (!surveyId || !action) return;
+
+        try {
+            if (action === 'stop') {
+                await API.updateSurveyStatus(surveyId, 'archived');
+                const s = state.surveyMap.get(surveyId);
+                if (s) {
+                    s.status = 'archived';
+                    s.updatedAt = new Date().toISOString();
+                }
+                alert('배포가 종료되었습니다.');
+            } else if (action === 'republish') {
+                await API.updateSurveyStatus(surveyId, 'published');
+                const s = state.surveyMap.get(surveyId);
+                if (s) {
+                    s.status = 'published';
+                    s.updatedAt = new Date().toISOString();
+                }
+                alert('설문이 다시 배포되었습니다!');
+            }
+
+            renderFolders();
+            renderSurveys();
+            updateAnalytics();
+        } catch (err) {
+            console.error(err);
+            alert('설문 상태를 변경하는 중 오류가 발생했습니다.');
+        }
+    });
 
     // Utility functions (reduced)
 
