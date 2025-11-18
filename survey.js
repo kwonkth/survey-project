@@ -91,6 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (_) {}
 
+        const isLast = state.currentQuestionIndex === state.survey.questions.length - 1;
+
         if (question.type === 'radio' || question.type === 'checkbox') {
             question.options.forEach(optionText => {
                 const button = document.createElement('button');
@@ -99,6 +101,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.onclick = () => handleOptionClick(optionText, question.type);
                 optionsContainer.appendChild(button);
             });
+            // 마지막 문항에는 완료 버튼 제공
+            if (isLast) {
+                const finishBtn = document.createElement('button');
+                finishBtn.id = 'finishSurveyBtn';
+                finishBtn.textContent = '설문 완료';
+                finishBtn.className = 'submit-btn';
+                finishBtn.style.marginTop = '1rem';
+                finishBtn.onclick = finalizeSurvey;
+                optionsContainer.appendChild(finishBtn);
+            }
         } else if (question.type === 'text') {
             const textInput = document.createElement('input');
             textInput.type = 'text';
@@ -107,9 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
             optionsContainer.appendChild(textInput);
 
             const submitBtn = document.createElement('button');
-            submitBtn.textContent = '다음';
+            submitBtn.textContent = isLast ? '설문 완료' : '다음';
             submitBtn.className = 'submit-btn';
-            submitBtn.onclick = () => handleTextSubmit(textInput.value);
+            submitBtn.onclick = () => {
+                handleTextSubmit(textInput.value);
+                if (isLast) finalizeSurvey();
+            };
             optionsContainer.appendChild(submitBtn);
         }
         // Add other question types as needed (e.g., 'scale')
@@ -176,28 +191,28 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = `
             <div id="background"></div>
             <div class="completion-screen">
-                <h2>설문에 참여해주셔서 감사합니다!</h2>
+                <h2>참여해주셔서 감사합니다.</h2>
                 <p>모든 답변이 기록되었습니다.</p>
             </div>
         `;
-        // Fire-and-forget save; errors are logged
-        saveResponsesToServer();
+        // 저장은 finalizeSurvey에서 수행됨
     }
 
-    async function saveResponsesToServer() {
-        const created_at = new Date().toISOString();
+    async function finalizeSurvey() {
         try {
-            for (const ans of state.answers) {
-                const value = Array.isArray(ans.value) ? JSON.stringify(ans.value) : String(ans.value);
-                await API.postResult({
-                    survey_id: state.survey.id,
-                    question_id: ans.questionId,
-                    answer_value: value,
-                    created_at
-                });
-            }
+            const created_at = new Date().toISOString();
+            const result_id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `r_${Date.now().toString(36)}${Math.random().toString(36).slice(2,8)}`;
+            // answers는 [{questionId, value}] 배열 형태로 저장
+            await API.postResult({
+                result_id,
+                survey_id: state.survey.id,
+                answers: state.answers,
+                created_at
+            });
         } catch (e) {
             console.error('응답 저장 중 오류', e);
+        } finally {
+            showCompletionScreen();
         }
     }
 
