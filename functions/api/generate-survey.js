@@ -60,13 +60,14 @@ export async function onRequestPost({ request, env }) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        // Google Gemini 2.0 Flash (stable) via OpenRouter
-        model: 'google/gemini-2.0-flash-001',
+        // Anthropic Claude Haiku 4.5 via OpenRouter
+        model: 'anthropic/claude-haiku-4.5',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userContent }
         ],
-        temperature: 0.7
+        temperature: 0.7,
+        response_format: { type: 'json_object' }
       })
     });
 
@@ -76,14 +77,31 @@ export async function onRequestPost({ request, env }) {
     }
 
     const data = await resp.json();
-    const content = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.message?.[0]?.content || '';
+
+    // Handle different content shapes (string or array of parts)
+    const message = data?.choices?.[0]?.message || {};
+    let content = message.content;
+
+    if (Array.isArray(content)) {
+      // Gemini 계열은 [{ text: "..." }] 형태로 올 수 있음
+      content = content.map(part => {
+        if (typeof part === 'string') return part;
+        if (typeof part?.text === 'string') return part.text;
+        if (typeof part?.content === 'string') return part.content;
+        return '';
+      }).join('\n').trim();
+    }
+
+    if (typeof content !== 'string') {
+      content = String(content ?? '');
+    }
 
     let parsed;
     try {
-      parsed = typeof content === 'string' ? JSON.parse(content) : content;
+      parsed = JSON.parse(content);
     } catch (e) {
-      // Attempt to extract JSON substring
-      const match = String(content).match(/\{[\s\S]*\}$/);
+      // Attempt to extract JSON substring from mixed text
+      const match = String(content).match(/\{[\s\S]*\}/);
       if (match) {
         try { parsed = JSON.parse(match[0]); } catch (_) {}
       }
