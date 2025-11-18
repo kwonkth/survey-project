@@ -52,6 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Kick off initial load and rendering
+    init();
+
     function loadFolders() {
         state.folders = getDefaultFolders();
         state.folderMap.clear();
