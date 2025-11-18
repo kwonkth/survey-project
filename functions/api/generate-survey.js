@@ -60,8 +60,8 @@ export async function onRequestPost({ request, env }) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        // Google Gemini 2.0 Flash Thinking via OpenRouter
-        model: 'google/gemini-2.0-flash-thinking',
+        // Google Gemini 2.0 Flash (stable) via OpenRouter
+        model: 'google/gemini-2.0-flash-001',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userContent }
