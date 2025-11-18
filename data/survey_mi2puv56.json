@@ -1,0 +1,1 @@
+{"id":"survey_mi2puv56","title":"test1","description":"test1","createdAt":"2025-11-17T05:40:54.954Z","updatedAt":"2025-11-17T05:40:54.954Z","questions":[{"id":"q_1","order":1,"text":"dd","type":"radio","required":true,"options":["예","아니오"]}]}

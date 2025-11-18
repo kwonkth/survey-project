@@ -185,11 +185,19 @@ body {
 .quest-item {
     display: flex;
     align-items: center;
+    gap: 1rem;
     padding: 1rem;
-    background: white;
+    background-color: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-top: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.quest-item:hover {
+    transform: translateY(-3px) scale(1.02);
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .quest-avatar {
@@ -363,17 +371,12 @@ body {
 
 .form-control {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-family: inherit;
-    font-size: 1rem;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .form-control:focus {
-    outline: none;
-    border-color: var(--primary-color);
+outline: none;
+border-color: var(--primary-color);
+box-shadow: 0 0 0 3px rgba(106, 90, 205, 0.1);
     box-shadow: 0 0 0 3px rgba(106, 90, 205, 0.1);
 }
 

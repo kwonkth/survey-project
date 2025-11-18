@@ -1,0 +1,1 @@
+{"id":"survey_mi2r7acc","title":"test2","description":"test2","createdAt":"2025-11-17T06:18:34.140Z","updatedAt":"2025-11-17T06:18:34.140Z","questions":[{"id":"q_1","order":1,"text":"2번째 테스트입니다","type":"radio","required":true,"options":["예","아니오"]}]}

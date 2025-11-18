@@ -36,11 +36,19 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('/images/배경.png');
+            background-image: url('images/배경.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            z-index: 1;
+            z-index: 0; /* 모든 콘텐츠 뒤로 보내기 (부모 배경 뒤로는 가지 않도록 0으로 설정) */
+        }
+
+        #content {
+            position: relative;
+            z-index: 1; /* 배경보다 위로 올리기 */
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
         
         #game-container {
@@ -75,19 +83,21 @@
         #options-container {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 16px;
         }
         
         .option-btn {
             background: rgba(255, 255, 255, 0.9);
             color: #333;
             border: none;
-            padding: 12px 20px;
+            padding: 14px 20px;
             border-radius: 5px;
             cursor: pointer;
             font-size: 1.1rem;
             text-align: left;
             transition: all 0.3s ease;
+            letter-spacing: 0.2px;
+            line-height: 1.5;
         }
         
         .option-btn:hover {
@@ -116,217 +126,18 @@
 <body>
     <div class="mobile-container">
         <div id="background"></div>
-        <div id="game-container" style="position: relative; z-index: 2;">
-            <div id="progress">질문 1/5</div>
-            <div id="text-box">
-                <div id="character-name">설문조사</div>
-                <div id="question-text">안녕하세요! 설문에 참여해주셔서 감사합니다.</div>
-                <div id="options-container">
-                    <!-- Options will be added here dynamically -->
+        <div id="content">
+            <div id="game-container">
+                <div id="progress"></div>
+                <div id="text-box">
+                    <div id="character-name"></div>
+                    <div id="questionContainer"></div>
+                    <div id="optionsContainer"></div>
                 </div>
             </div>
         </div>
     </div>
-
-    <script>
-        // Sample survey data - in a real app, this would come from the URL parameters
-        const surveyData = {
-            title: "모험의 시작",
-            description: "당신의 모험을 시작해보세요!",
-            questions: [
-                {
-                    text: "당신의 이름은 무엇인가요?",
-                    type: "text",
-                    required: true
-                },
-                {
-                    text: "어떤 모험을 떠나고 싶으신가요?",
-                    type: "radio",
-                    required: true,
-                    options: [
-                        "신비한 마법의 숲 탐험",
-                        "고대 유적 발굴 여행",
-                        "우주 여행"
-                    ]
-                },
-                {
-                    text: "어떤 능력을 가지고 싶으신가요? (중복 선택 가능)",
-                    type: "checkbox",
-                    required: false,
-                    options: [
-                        "투명해지기",
-                        "시간을 멈추기",
-                        "생각 읽기",
-                        "순간이동"
-                    ]
-                },
-                {
-                    text: "이 모험에서 가장 기대되는 점은 무엇인가요?",
-                    type: "text",
-                    required: true
-                }
-            ]
-        };
-
-        // Game state
-        let currentQuestionIndex = 0;
-        const answers = [];
-
-        // DOM elements
-        const questionText = document.getElementById('question-text');
-        const optionsContainer = document.getElementById('options-container');
-        const progressText = document.getElementById('progress');
-        const characterName = document.getElementById('character-name');
-
-        // Initialize the game
-        function initGame() {
-            showQuestion(0);
-        }
-
-        // Show question at the given index
-        function showQuestion(index) {
-            if (index >= surveyData.questions.length) {
-                // All questions answered
-                endSurvey();
-                return;
-            }
-
-            const question = surveyData.questions[index];
-            currentQuestionIndex = index;
-            
-            // Update progress
-            progressText.textContent = `질문 ${index + 1}/${surveyData.questions.length}`;
-            
-            // Update question text
-            questionText.textContent = question.text;
-            
-            // Clear previous options
-            optionsContainer.innerHTML = '';
-            
-            // Add options based on question type
-            if (question.type === 'text') {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.placeholder = '답변을 입력해주세요...';
-                input.className = 'option-btn';
-                input.style.width = '100%';
-                input.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        saveAnswer(input.value);
-                        showQuestion(index + 1);
-                    }
-                });
-                
-                const nextBtn = document.createElement('button');
-                nextBtn.textContent = '다음';
-                nextBtn.className = 'option-btn';
-                nextBtn.style.marginTop = '10px';
-                nextBtn.onclick = function() {
-                    if (question.required && !input.value.trim()) {
-                        alert('답변을 입력해주세요.');
-                        return;
-                    }
-                    saveAnswer(input.value);
-                    showQuestion(index + 1);
-                };
-                
-                optionsContainer.appendChild(input);
-                optionsContainer.appendChild(nextBtn);
-                input.focus();
-                
-            } else if (question.type === 'radio' || question.type === 'checkbox') {
-                question.options.forEach((option, i) => {
-                    const btn = document.createElement('button');
-                    btn.className = 'option-btn';
-                    btn.textContent = option;
-                    btn.onclick = function() {
-                        if (question.type === 'radio') {
-                            // For radio buttons, immediately go to next question
-                            saveAnswer(option);
-                            setTimeout(() => showQuestion(index + 1), 300);
-                        } else {
-                            // For checkboxes, toggle selection
-                            btn.classList.toggle('selected');
-                            if (btn.classList.contains('selected')) {
-                                btn.style.background = '#4CAF50';
-                                btn.style.color = 'white';
-                            } else {
-                                btn.style.background = 'rgba(255, 255, 255, 0.9)';
-                                btn.style.color = '#333';
-                            }
-                        }
-                    };
-                    optionsContainer.appendChild(btn);
-                });
-                
-                // Add next button for checkbox questions
-                if (question.type === 'checkbox') {
-                    const nextBtn = document.createElement('button');
-                    nextBtn.textContent = '다음';
-                    nextBtn.className = 'option-btn';
-                    nextBtn.style.marginTop = '10px';
-                    nextBtn.style.background = '#2196F3';
-                    nextBtn.style.color = 'white';
-                    nextBtn.onclick = function() {
-                        const selectedOptions = [];
-                        const buttons = optionsContainer.querySelectorAll('.option-btn');
-                        buttons.forEach(btn => {
-                            if (btn.classList.contains('selected')) {
-                                selectedOptions.push(btn.textContent);
-                            }
-                        });
-                        
-                        if (question.required && selectedOptions.length === 0) {
-                            alert('하나 이상 선택해주세요.');
-                            return;
-                        }
-                        
-                        saveAnswer(selectedOptions.join(', '));
-                        showQuestion(index + 1);
-                    };
-                    optionsContainer.appendChild(nextBtn);
-                }
-            }
-            
-            // Add animation
-            questionText.style.animation = 'none';
-            questionText.offsetHeight; // Trigger reflow
-            questionText.style.animation = 'fadeIn 0.5s ease-in-out';
-        }
-
-        // Save answer to the answers array
-        function saveAnswer(answer) {
-            answers[currentQuestionIndex] = answer;
-            console.log('Current answers:', answers);
-        }
-
-        // Show completion screen
-        function endSurvey() {
-            questionText.innerHTML = '모든 질문에 답변해주셔서 감사합니다!<br><br>당신의 모험이 곧 시작됩니다...';
-            optionsContainer.innerHTML = '';
-            
-            // In a real app, you would submit the answers to a server here
-            console.log('Survey completed. Answers:', answers);
-            
-            // Show completion animation
-            setTimeout(() => {
-                window.location.href = 'results.html';
-            }, 3000);
-        }
-
-        // Start the game when the page loads
-        document.addEventListener('DOMContentLoaded', initGame);
-    </script>
-    <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .selected {
-            background: #4CAF50 !important;
-            color: white !important;
-        }
-    </style>
-</body>
-</html>
+    <script src="story-engine.js"></script>
+    <script src="survey.js"></script>
+    </body>
+    </html>

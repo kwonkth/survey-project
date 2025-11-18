@@ -1,0 +1,459 @@
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+    Chart.register(ChartDataLabels);
+  }
+
+  // Populate survey selector and render per-survey stats
+  function populateSurveySelect() {
+    const sel = document.getElementById('surveySelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '설문을 선택하세요';
+    sel.appendChild(placeholder);
+    state.surveys.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.title || s.id;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => {
+      state.selectedSurveyId = sel.value || null;
+      onSurveySelected(state.selectedSurveyId);
+    });
+  }
+
+  // Populate question selector for the selected survey (exclude name and text-only questions for doughnut)
+  function populateQuestionSelect(surveyId) {
+    const sel = document.getElementById('questionSelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    const meta = state.surveys.find(s => s.id === surveyId);
+    if (!meta) { sel.disabled = true; return; }
+    const eligible = (meta.questions || []).filter(q => !isNameQuestion(q) && Array.isArray(q.options) && q.options.length > 0);
+    if (eligible.length === 0) {
+      sel.disabled = true;
+      setOptionEmpty(true);
+      return;
+    }
+    sel.disabled = false;
+    eligible.forEach((q, idx) => {
+      const opt = document.createElement('option');
+      opt.value = q.id;
+      opt.textContent = (q.text || `문항 ${idx+1}`).slice(0, 60);
+      sel.appendChild(opt);
+    });
+    sel.onchange = () => {
+      renderOptionDoughnut(surveyId, sel.value);
+    };
+    // default to first eligible
+    sel.value = eligible[0].id;
+    renderOptionDoughnut(surveyId, sel.value);
+  }
+
+  function renderDistributionHTML(q) {
+    if (q.type && q.type.includes('객관식')) {
+      const rows = q.options.map(o => `
+        <tr>
+          <td>${escapeHTML(o.label)}</td>
+          <td style="text-align:right;">${o.count}</td>
+          <td style="text-align:right;">${o.percent}%</td>
+        </tr>`).join('');
+      return `
+        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+          <thead>
+            <tr><th style="text-align:left;">선택지</th><th style="text-align:right;">응답수</th><th style="text-align:right;">비율</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+    // Text or others: show responded count and sample values (up to 5)
+    const samples = (q.textAnswers || []).slice(0, 5).map(a => `• ${escapeHTML(a)}`).join('<br>');
+    return `
+      <div style="font-size:0.9rem; color:#555;">
+        자유응답 수: ${q.respondedCount}${samples ? `<div style="margin-top:0.4rem;">상위 예시:<br>${samples}</div>` : ''}
+      </div>`;
+  }
+
+  function computeSurveyStats(survey, responses) {
+    const total = responses.length;
+    const qListRaw = Array.isArray(survey.questions) ? survey.questions : [];
+    const qList = qListRaw.filter(q => !isNameQuestion(q));
+    const completionRate = calcCompletionRate(survey, responses);
+    const questions = qList.map((q, idx) => {
+      const answered = responses.filter(r => Array.isArray(r.answers) && r.answers.some(a => a.questionId === q.id)).length;
+      const dropoffRate = total ? Math.round(((total - answered) / total) * 100) : 0;
+
+      // Build distribution
+      let dist = [];
+      let textAnswers = [];
+      if (q.type && q.type.includes('객관식')) {
+        // Collect option labels present in survey definition
+        const labels = Array.isArray(q.options) ? q.options : [];
+        const counts = new Map(labels.map(l => [String(l), 0]));
+        responses.forEach(r => {
+          (r.answers || []).forEach(a => {
+            if (a.questionId === q.id) {
+              const v = Array.isArray(a.value) ? a.value : [a.value];
+              v.forEach(val => {
+                const key = String(val);
+                counts.set(key, (counts.get(key) || 0) + 1);
+              });
+            }
+          });
+        });
+        dist = labels.map(label => {
+          const count = counts.get(String(label)) || 0;
+          const percent = answered ? Math.round((count / answered) * 100) : 0;
+          return { label, count, percent };
+        });
+      } else {
+        // Text or scale: gather raw values
+        const vals = [];
+        responses.forEach(r => {
+          (r.answers || []).forEach(a => {
+            if (a.questionId === q.id && a.value != null && String(a.value).trim() !== '') {
+              vals.push(String(a.value));
+            }
+          });
+        });
+        textAnswers = vals;
+      }
+
+      return {
+        id: q.id,
+        number: idx + 1,
+        text: q.text || `질문 ${idx + 1}`,
+        type: q.type || '',
+        respondedCount: answered,
+        dropoffRate,
+        options: dist,
+        textAnswers
+      };
+    });
+
+    return { totalResponses: total, completionRate, questions };
+  }
+
+  function isNameQuestion(q){
+    if (!q) return false;
+    if (String(q.id).toLowerCase() === 'q_name') return true;
+    const t = String(q.text || '');
+    return /이름/.test(t);
+  }
+
+  function wireExports() {
+    const btnJson = document.getElementById('exportJsonBtn');
+    const btnCsv = document.getElementById('exportCsvBtn');
+    const btnXls = document.getElementById('exportXlsBtn');
+    const getData = () => state.latestStats || null;
+
+    const ensureSelected = () => {
+      if (!state.selectedSurveyId || !state.latestStats) {
+        alert('먼저 설문을 선택해 주세요.');
+        return false;
+      }
+      return true;
+    };
+
+    if (btnJson) btnJson.addEventListener('click', () => {
+      if (!ensureSelected()) return;
+      const data = getData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+      download(`${safeFilename(data.title || data.surveyId)}_stats.json`, blob);
+    });
+
+    if (btnCsv) btnCsv.addEventListener('click', () => {
+      if (!ensureSelected()) return;
+      const data = getData();
+      const csv = toCSV(data);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      download(`${safeFilename(data.title || data.surveyId)}_stats.csv`, blob);
+    });
+
+    if (btnXls) btnXls.addEventListener('click', () => {
+      if (!ensureSelected()) return;
+      const data = getData();
+      const csv = toCSV(data);
+      const blob = new Blob([csv], { type: 'application/vnd.ms-excel;charset=utf-8' });
+      download(`${safeFilename(data.title || data.surveyId)}_stats.xls`, blob);
+    });
+  }
+
+  function toCSV(data) {
+    // Flatten per-question stats
+    const rows = [];
+    rows.push(['SurveyId','SurveyTitle','QuestionNo','QuestionText','Type','Responded','Total','Dropoff(%)','OptionLabel','OptionCount','OptionPercent','SampleTextAnswers']);
+    const total = data.totalResponses;
+    data.questions.forEach(q => {
+      if (q.options && q.options.length) {
+        q.options.forEach(o => {
+          rows.push([
+            data.surveyId,
+            data.title || '',
+            q.number,
+            sanitizeCSV(q.text),
+            q.type,
+            q.respondedCount,
+            total,
+            q.dropoffRate,
+            sanitizeCSV(o.label),
+            o.count,
+            o.percent,
+            ''
+          ]);
+        });
+      } else {
+        const sample = (q.textAnswers || []).slice(0,5).join(' | ');
+        rows.push([
+          data.surveyId,
+          data.title || '',
+          q.number,
+          sanitizeCSV(q.text),
+          q.type,
+          q.respondedCount,
+          total,
+          q.dropoffRate,
+          '',
+          '',
+          '',
+          sanitizeCSV(sample)
+        ]);
+      }
+    });
+    return rows.map(r => r.map(cell => wrapCSV(String(cell ?? ''))).join(',')).join('\n');
+  }
+
+  function wrapCSV(s){
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  function sanitizeCSV(s){ return (s||'').replace(/\r|\n/g,' ').trim(); }
+  function safeFilename(s){ return (s||'').replace(/[^\w\-\.]+/g,'_').slice(0,80) || 'survey'; }
+
+  function download(filename, blob){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+  }
+
+  const STORAGE_PREFIX = 'surveyGuide';
+  const STORAGE_KEYS = {
+    surveyIndex: `${STORAGE_PREFIX}.surveyIndex`,
+    surveyResponses: (id) => `${STORAGE_PREFIX}.responses.${id}`
+  };
+
+  const state = {
+    surveys: [],
+    chartInstance: null,
+    selectedSurveyId: null,
+    latestStats: null,
+    selectedDropoutChart: null,
+    doughnutChart: null
+  };
+
+  init();
+
+  function init() {
+    state.surveys = readJSON(STORAGE_KEYS.surveyIndex, []);
+    populateSurveySelect();
+    updateSummary();
+    const params = new URLSearchParams(window.location.search);
+    const preselectId = params.get('surveyId');
+    if (preselectId && state.surveys.some(s => s.id === preselectId)) {
+      state.selectedSurveyId = preselectId;
+      const sel = document.getElementById('surveySelect');
+      if (sel) sel.value = preselectId;
+      onSurveySelected(preselectId);
+    }
+    wireExports();
+  }
+
+  function updateSummary() {
+    let totalResponses = 0;
+    let totalCompletion = 0;
+    let counted = 0;
+
+    state.surveys.forEach((survey) => {
+      const responses = readJSON(STORAGE_KEYS.surveyResponses(survey.id), []);
+      totalResponses += responses.length;
+      if (responses.length > 0) {
+        totalCompletion += calcCompletionRate(survey, responses);
+        counted += 1;
+      }
+    });
+
+    const avgCompletion = counted ? Math.round(totalCompletion / counted) : 0;
+    setText('totalResponsesValue', totalResponses);
+    setText('completionRateValue', `${avgCompletion}%`);
+    setText('dropoffRateValue', `${100 - avgCompletion}%`);
+  }
+
+  function getAnswerDistribution(surveyId, questionId) {
+    const meta = state.surveys.find(s => s.id === surveyId);
+    if (!meta) return { labels: [], counts: [] };
+    const q = (meta.questions || []).find(x => x.id === questionId);
+    if (!q || !Array.isArray(q.options) || q.options.length === 0) return { labels: [], counts: [] };
+    const responses = readJSON(STORAGE_KEYS.surveyResponses(surveyId), []);
+    const labels = q.options.map(o => String(o));
+    const counts = new Map(labels.map(l => [l, 0]));
+    responses.forEach(r => {
+      (r.answers || []).forEach(a => {
+        if (a.questionId === q.id) {
+          const vs = Array.isArray(a.value) ? a.value : [a.value];
+          vs.forEach(v => counts.set(String(v), (counts.get(String(v)) || 0) + 1));
+        }
+      });
+    });
+    return { labels, counts: labels.map(l => counts.get(l) || 0) };
+  }
+
+  function renderSelectedDropoutBar(surveyId){
+    const meta = state.surveys.find(s => s.id === surveyId);
+    const ctx = document.getElementById('selectedDropoutChart');
+    if (!meta || !ctx) return;
+    const responses = readJSON(STORAGE_KEYS.surveyResponses(surveyId), []);
+    const qList = (meta.questions || []).filter(q => !isNameQuestion(q));
+    const labels = qList.map((q, i) => `Q${i+1}`);
+    const totals = responses.length;
+    const dropCounts = qList.map(q => {
+      const answered = responses.filter(r => Array.isArray(r.answers) && r.answers.some(a => a.questionId === q.id)).length;
+      return Math.max(0, totals - answered);
+    });
+    if (state.selectedDropoutChart) state.selectedDropoutChart.destroy();
+    state.selectedDropoutChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: '이탈자 수', data: dropCounts, backgroundColor: 'rgba(245, 87, 108, 0.7)', borderColor: 'rgba(245, 87, 108, 1)', borderWidth: 1 }] },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    });
+  }
+
+  function renderOptionDoughnut(surveyId, questionId){
+    const ctx = document.getElementById('overallDoughnutChart');
+    const optionEmpty = document.getElementById('optionEmpty');
+    if (!ctx) return;
+    const { labels, counts } = getAnswerDistribution(surveyId, questionId);
+    if (!labels.length) {
+      if (state.doughnutChart) { state.doughnutChart.destroy(); state.doughnutChart = null; }
+      if (optionEmpty) optionEmpty.style.display = 'block';
+      return;
+    }
+    if (optionEmpty) optionEmpty.style.display = 'none';
+    if (state.doughnutChart) state.doughnutChart.destroy();
+    const colors = labels.map((_, i) => `hsl(${(i*57)%360} 70% 60% / 0.85)`);
+    const borders = labels.map((_, i) => `hsl(${(i*57)%360} 70% 40% / 1)`);
+    state.doughnutChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderColor: borders }] },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  function setOptionEmpty(show){ const el = document.getElementById('optionEmpty'); if (el) el.style.display = show ? 'block' : 'none'; }
+  function setDropoutEmpty(show){ const el = document.getElementById('dropoutEmpty'); if (el) el.style.display = show ? 'block' : 'none'; }
+
+  function onSurveySelected(surveyId){
+    // Reset charts
+    if (!surveyId) {
+      if (state.selectedDropoutChart) { state.selectedDropoutChart.destroy(); state.selectedDropoutChart = null; }
+      if (state.doughnutChart) { state.doughnutChart.destroy(); state.doughnutChart = null; }
+      setDropoutEmpty(true); setOptionEmpty(true);
+      return;
+    }
+    renderSelectedDropoutBar(surveyId);
+    setDropoutEmpty(false);
+    populateQuestionSelect(surveyId);
+  }
+
+  function renderDropoff(items) {
+    const ctx = document.getElementById('dropoffChart');
+    const details = document.getElementById('dropoffDetails');
+    if (!ctx || !details) return;
+
+    if (state.chartInstance) state.chartInstance.destroy();
+
+    const labels = items.map(i => `Q${i.questionNumber}`);
+    const data = items.map(i => i.dropoffRate);
+
+    state.chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: '이탈률 (%)',
+          data,
+          backgroundColor: data.map(rate => rate > 30 ? 'rgba(245,87,108,0.7)' : rate > 15 ? 'rgba(255,193,7,0.7)' : 'rgba(76,175,80,0.7)'),
+          borderColor: data.map(rate => rate > 30 ? 'rgba(245,87,108,1)' : rate > 15 ? 'rgba(255,193,7,1)' : 'rgba(76,175,80,1)'),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            display: true,
+            color: '#333',
+            anchor: 'end',
+            align: 'top',
+            font: { weight: 'bold' },
+            formatter: (v) => `${v}%`
+          },
+          tooltip: {
+            callbacks: {
+              afterBody: (items) => {
+                const idx = items[0].dataIndex;
+                const it = items && items.length ? items[0] : null;
+                const d = items ? items[0].chart.data.datasets[0].data[idx] : null;
+                return '';
+              }
+            }
+          }
+        },
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { callback: v => `${v}%` } }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+
+    details.innerHTML = '';
+    items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'question-dropoff-item';
+      el.innerHTML = `
+        <div class="question-number">Q${item.questionNumber}</div>
+        <div style="flex:1">
+          <div class="question-text">${escapeHTML(truncate(item.questionText, 60))}</div>
+          <div class="dropoff-stats">
+            <span class="dropoff-rate">이탈률: ${item.dropoffRate}%</span>
+            <span class="response-count">응답: ${item.respondedCount}/${item.totalCount}</span>
+          </div>
+        </div>
+      `;
+      details.appendChild(el);
+    });
+  }
+
+  function calcCompletionRate(survey, responses) {
+    if (!responses.length) return 0;
+    const qCount = survey.questions?.length || 0;
+    if (!qCount) return 0;
+    const completed = responses.filter(r => Array.isArray(r.answers) && r.answers.length === qCount).length;
+    return Math.round((completed / responses.length) * 100);
+  }
+
+  function readJSON(key, def) {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; }
+  }
+
+  function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
+  function truncate(t, n) { return !t ? '' : (t.length > n ? `${t.slice(0,n)}…` : t); }
+  function escapeHTML(s){ return String(s).replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+});

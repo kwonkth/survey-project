@@ -1,0 +1,1 @@
+{"id":"survey_mi2sbbqy","title":"test3","description":"test3","createdAt":"2025-11-17T06:49:42.202Z","updatedAt":"2025-11-17T06:49:42.202Z","questions":[{"id":"q_1","order":1,"text":"3번째 테스트 질문입니다","type":"radio","required":true,"options":["예","아니오"]},{"id":"q_2","order":2,"text":"3-1 테스트 질문입니다","type":"radio","required":true,"options":[]}]}
