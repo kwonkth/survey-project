@@ -825,7 +825,7 @@ async function handleCompleteSurvey() {
         questions: []
     };
 
-    // 질문 수집
+    // 질문 수집: 모든 챕터를 사용자가 입력한 내용/유형 그대로 저장
     const collected = [];
     document.querySelectorAll(".question-block").forEach((block, i) => {
         const qtext = block.querySelector("textarea")?.value?.trim() || "";
@@ -836,16 +836,7 @@ async function handleCompleteSurvey() {
         if (qtypeRaw.includes('객관식')) qtype = 'radio';
         if (qtypeRaw.includes('복수') || qtypeRaw.includes('체크')) qtype = 'checkbox';
 
-        // Chapter1(기본 이름 입력)은 고정: q_name, text 타입
-        const isDefaultName = block.dataset.defaultName === '1' || i === 0;
-        const question = isDefaultName ? {
-            id: 'q_name',
-            order: 1,
-            text: '모험가여, 당신의 이름을 알려주세요.',
-            type: 'text',
-            required: false,
-            options: []
-        } : {
+        const question = {
             id: `q_${i+1}`,
             order: i + 1,
             text: qtext,
@@ -865,7 +856,6 @@ async function handleCompleteSurvey() {
         collected.push(question);
     });
 
-    // Chapter1을 q_name으로 고정했으므로 수집된 배열을 그대로 사용
     surveyData.questions = collected.map((q, idx) => ({ ...q, order: idx + 1 }));
 
     // Optional story merging: if a story was prepared elsewhere, include; otherwise null

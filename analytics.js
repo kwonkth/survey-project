@@ -324,24 +324,104 @@ document.addEventListener('DOMContentLoaded', () => {
     return { labels, counts: options.map(o => counts.get(String(o.value)) || 0) };
   }
 
-  function renderSelectedDropoutBar(surveyId){
-    const meta = state.surveys.find(s => s.id === surveyId);
+  // 색상 팔레트: 도넛/막대 그래프에서 동일 label이면 동일 색상을 사용
+  const OPTION_COLOR_PALETTE = [
+    '#4a6baf', '#f5b041', '#e74c3c', '#27ae60',
+    '#9b59b6', '#16a085', '#e67e22', '#2c3e50'
+  ];
+  const optionColorMap = new Map();
+
+  function getColorForLabel(label) {
+    const key = String(label || '');
+    if (!optionColorMap.has(key)) {
+      const idx = optionColorMap.size % OPTION_COLOR_PALETTE.length;
+      optionColorMap.set(key, OPTION_COLOR_PALETTE[idx]);
+    }
+    return optionColorMap.get(key);
+  }
+
+  function getBorderColorForLabel(label) {
+    const base = getColorForLabel(label);
+    // 살짝 어둡게
+    return base;
+  }
+
+  function renderOptionBarsForAllQuestions(surveyId){
     const ctx = document.getElementById('chart1');
-    if (!meta || !ctx) return;
-    const responses = state.responsesBySurvey[surveyId] || [];
-    const qList = (meta.questions || []).filter(q => !isNameQuestion(q));
-    const labels = qList.map((q, i) => `Q${i+1}`);
-    const totals = responses.length;
-    const dropCounts = qList.map(q => {
-      const answered = responses.filter(r => Array.isArray(r.answers) && r.answers.some(a => a.questionId === q.id)).length;
-      return Math.max(0, totals - answered);
+    const containerEmpty = document.getElementById('dropoutEmpty');
+    if (!ctx) return;
+
+    const stats = state.latestStats;
+    if (!stats || stats.surveyId !== surveyId || !Array.isArray(stats.questions) || !stats.questions.length) {
+      if (state.selectedDropoutChart) { state.selectedDropoutChart.destroy(); state.selectedDropoutChart = null; }
+      if (containerEmpty) containerEmpty.style.display = 'block';
+      return;
+    }
+
+    const questions = stats.questions;
+    const labels = questions.map(q => `Q${q.number}`);
+
+    // 모든 객관식 문항의 옵션 라벨 집합
+    const optionLabelSet = new Set();
+    questions.forEach(q => {
+      (q.options || []).forEach(o => {
+        if (o && typeof o.label !== 'undefined') optionLabelSet.add(String(o.label));
+      });
     });
-    if (state.selectedDropoutChart) state.selectedDropoutChart.destroy();
+
+    const optionLabels = Array.from(optionLabelSet);
+
+    if (!optionLabels.length) {
+      if (state.selectedDropoutChart) { state.selectedDropoutChart.destroy(); state.selectedDropoutChart = null; }
+      if (containerEmpty) containerEmpty.style.display = 'block';
+      return;
+    }
+
+    const datasets = optionLabels.map(label => {
+      const data = questions.map(q => {
+        const found = (q.options || []).find(o => String(o.label) === String(label));
+        return found ? found.percent : 0;
+      });
+      return {
+        label,
+        data,
+        backgroundColor: getColorForLabel(label),
+        borderColor: getBorderColorForLabel(label),
+        borderWidth: 1,
+        maxBarThickness: 18
+      };
+    });
+
+    if (state.selectedDropoutChart) {
+      state.selectedDropoutChart.destroy();
+      state.selectedDropoutChart = null;
+    }
+
     state.selectedDropoutChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels, datasets: [{ label: '이탈자 수', data: dropCounts, backgroundColor: 'rgba(245, 87, 108, 0.7)', borderColor: 'rgba(245, 87, 108, 1)', borderWidth: 1 }] },
-      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { callback: v => `${v}%` } }
+        },
+        plugins: {
+          legend: { position: 'bottom' },
+          datalabels: {
+            display: true,
+            color: '#333',
+            anchor: 'end',
+            align: 'top',
+            font: { weight: 'bold', size: 10 },
+            formatter: (value) => value ? `${value}%` : ''
+          }
+        }
+      },
+      plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
     });
+
+    if (containerEmpty) containerEmpty.style.display = 'none';
   }
 
   function renderOptionDoughnut(surveyId, questionId){
@@ -356,8 +436,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (optionEmpty) optionEmpty.style.display = 'none';
     if (state.doughnutChart) state.doughnutChart.destroy();
-    const colors = labels.map((_, i) => `hsl(${(i*57)%360} 70% 60% / 0.85)`);
-    const borders = labels.map((_, i) => `hsl(${(i*57)%360} 70% 40% / 1)`);
+    const colors = labels.map(label => getColorForLabel(label));
+    const borders = labels.map(label => getBorderColorForLabel(label));
     state.doughnutChart = new Chart(ctx, {
       type: 'doughnut',
       data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderColor: borders }] },
@@ -385,8 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const stats = computeSurveyStats(meta, responses);
       state.latestStats = { surveyId, title: meta.title, ...stats };
 
-      renderSelectedDropoutBar(surveyId);
-      setDropoutEmpty(false);
+      renderOptionBarsForAllQuestions(surveyId);
       populateQuestionSelect(surveyId);
     }).catch(() => {
       // failure state: clear visuals
