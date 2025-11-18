@@ -11,6 +11,8 @@ let surveyModal, completionModal,
     createNewSurveyBtn, completeSurveyBtn,
     addChapterBtn, questionBlocksContainer;
 
+let lastCreatedSurveyId = '';
+
 function ensureDefaultNameQuestion() {
     if (!questionBlocksContainer) return;
 
@@ -165,79 +167,44 @@ function importSurveysFromJSON(json) {
         throw new Error('유효한 설문 데이터가 없습니다.');
     }
 
-    const indexKey = 'surveyGuide.surveyIndex';
-    const indexList = JSON.parse(localStorage.getItem(indexKey) || '[]');
     const now = new Date().toISOString();
-
     let imported = 0;
-    const createdIds = [];
 
-    surveys.forEach((raw) => {
+    return Promise.all(surveys.map(async (raw, idx) => {
         const surveyId = raw.id && String(raw.id).trim() ? String(raw.id) : `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
         const title = String(raw.title || '제목 없음');
         const description = String(raw.description || '');
-        const status = ['draft', 'active', 'closed'].includes(raw.status) ? raw.status : 'active';
-        const folderId = raw.folderId ?? null;
 
         // 질문 정규화
         const questions = Array.isArray(raw.questions) ? raw.questions.slice() : [];
-        const normalized = questions.map((q, idx) => {
-            const qid = q.id && String(q.id).trim() ? String(q.id) : `q_${idx + 1}`;
-            const order = Number.isFinite(q.order) ? Number(q.order) : idx + 1;
+        const normalized = questions.map((q, i) => {
+            const qid = q.id && String(q.id).trim() ? String(q.id) : `q_${i + 1}`;
+            const order = Number.isFinite(q.order) ? Number(q.order) : i + 1;
             const text = String(q.text || '').trim();
             let type = String(q.type || 'text');
-            // 타입 정규화 (한글 라벨도 수용)
             if (/객관식/.test(type) && /복수|체크/.test(type)) type = 'checkbox';
             else if (/객관식/.test(type)) type = 'radio';
             else if (/주관식/.test(type)) type = 'text';
             else if (/scale|척도/.test(type)) type = 'scale';
             else if (!['text','radio','checkbox','scale'].includes(type)) type = 'text';
-
-            const required = q.required !== false; // 기본 필수
+            const required = q.required !== false;
             const options = Array.isArray(q.options) ? q.options.map(o => String(o)).filter(Boolean) : [];
             return { id: qid, order, text, type, required, options };
         }).filter(q => q.text);
 
-        const surveyData = {
-            id: surveyId,
+        await API.postSurvey({
+            survey_id: surveyId,
             title,
             description,
-            createdAt: now,
-            updatedAt: now,
-            questions: normalized
-        };
-
-        // 인덱스에 추가(중복 id는 대체)
-        const existingIdx = indexList.findIndex(s => s.id === surveyId);
-        const indexMeta = {
-            id: surveyId,
-            title,
-            createdAt: now,
-            updatedAt: now,
-            status,
-            folderId,
-            questions: normalized
-        };
-        if (existingIdx >= 0) indexList[existingIdx] = indexMeta; else indexList.push(indexMeta);
-
-        localStorage.setItem(`surveyGuide.survey.${surveyId}`, JSON.stringify(surveyData));
-        imported += 1;
-        createdIds.push(surveyId);
-    });
-
-    localStorage.setItem(indexKey, JSON.stringify(indexList));
-    localStorage.setItem('surveyGuide.lastCreatedSurvey', indexList[indexList.length - 1]?.id || '');
-
-    // Offer to export imported surveys into a folder's data/ (non-blocking)
-    setTimeout(() => {
-        if (createdIds.length && window.confirm('가져온 설문을 프로젝트의 data/ 폴더로 저장하시겠습니까?')) {
-            exportSurveysToDirectory(createdIds).catch(() => {
-                // fallback handled inside
-            });
-        }
-    }, 0);
-
-    return imported;
+            questions: JSON.stringify(normalized),
+            story: null,
+            created_at: now,
+            updated_at: now
+        });
+        imported++;
+        if (idx === surveys.length - 1) lastCreatedSurveyId = surveyId;
+        return true;
+    })).then(() => imported);
 }
 /* =======================================================
    기본 이름 질문 보장 (moved to global scope above)
@@ -277,7 +244,7 @@ function importSurveysFromJSON(json) {
     if (viewResultsBtn) {
         viewResultsBtn.addEventListener("click", (e) => {
             e.preventDefault();
-            const lastId = localStorage.getItem('surveyGuide.lastCreatedSurvey');
+            const lastId = lastCreatedSurveyId;
             const url = lastId ? `analytics.html?surveyId=${lastId}` : 'analytics.html';
             window.location.href = url;
         });
@@ -691,108 +658,66 @@ async function handleCompleteSurvey() {
 }
 
 
-// Export helper: write one or more surveys into a chosen directory's data/ (or directly if the chosen dir IS data)
-async function exportSurveysToDirectory(surveyIds) {
-    if (!Array.isArray(surveyIds) || surveyIds.length === 0) return;
-    if (!window.showDirectoryPicker) throw new Error('Directory picker not supported');
-
-    const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    // If the selected directory is already "data", use it. Otherwise, create/get a data subfolder.
-    let dataDirHandle = dirHandle;
-    try {
-        const name = (dataDirHandle && typeof dataDirHandle.name === 'string') ? dataDirHandle.name.toLowerCase() : '';
-        if (name !== 'data') {
-            dataDirHandle = await dirHandle.getDirectoryHandle('data', { create: true });
-        }
-    } catch (e) {
-        dataDirHandle = await dirHandle.getDirectoryHandle('data', { create: true });
-    }
-
-    for (const id of surveyIds) {
-        let jsonStr = localStorage.getItem(`surveyGuide.survey.${id}`);
-        if (!jsonStr) {
-            const indexList = JSON.parse(localStorage.getItem('surveyGuide.surveyIndex') || '[]');
-            const meta = indexList.find(i => i.id === id) || {};
-            jsonStr = JSON.stringify({ id, title: meta.title || '', questions: meta.questions || [] }, null, 2);
-        }
-        const fileHandle = await dataDirHandle.getFileHandle(`${id}.json`, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(new Blob([jsonStr], { type: 'application/json;charset=utf-8' }));
-        await writable.close();
-    }
-}
+// Removed legacy data-folder export; DB is the single source of truth.
 
 
 /* =======================================================
    대시보드(메인 index.html) 렌더링
 ======================================================= */
-function renderMainDashboard() {
-    const indexKey = 'surveyGuide.surveyIndex';
-    const surveys = JSON.parse(localStorage.getItem(indexKey) || '[]');
-
-    // 작업 중인 퀘스트
+async function renderMainDashboard() {
     const inProgress = document.getElementById('inProgressQuestContainer');
-    if (inProgress) {
-        inProgress.innerHTML = '<h3>작업 중인 퀘스트</h3>';
-        if (surveys.length === 0) {
-            inProgress.innerHTML += '<div class="empty-quest-item">최근 작업한 설문이 없습니다.</div>';
-        } else {
-            const list = document.createElement('div');
-            surveys
-                .slice()
-                .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
-                .slice(0, 5)
-                .forEach(meta => {
-                    const responses = JSON.parse(localStorage.getItem(`surveyGuide.responses.${meta.id}`) || '[]');
-                    const item = document.createElement('div');
-                    item.className = 'quest-item';
-                    item.innerHTML = `
-                        <div class="quest-avatar">📝</div>
-                        <div class="quest-info">
-                            <h4>${meta.title || '제목 없음'}</h4>
-                            <div class="progress-bar"><div class="progress" style="width:${calcCompletion(meta, responses)}%"></div></div>
-                            <div style="font-size:0.9rem;color:#666;">문항 ${meta.questions?.length || 0}개 · 응답 ${responses.length}건</div>
-                        </div>`;
-                    item.addEventListener('click', () => {
-                        window.location.href = `dashboard.html?surveyId=${meta.id}`;
-                    });
-                    list.appendChild(item);
-                });
-            inProgress.appendChild(list);
-        }
-    }
-
-    // 퀘스트 통계
     const stats = document.getElementById('questStatsContainer');
-    if (stats) {
-        let totalResponses = 0;
-        let totalCompletionPct = 0;
-        let counted = 0;
-        surveys.forEach(meta => {
-            const responses = JSON.parse(localStorage.getItem(`surveyGuide.responses.${meta.id}`) || '[]');
-            totalResponses += responses.length;
-            if (responses.length > 0) {
-                totalCompletionPct += calcCompletion(meta, responses);
-                counted += 1;
+
+    try {
+        const res = await fetch('/api/surveys', { method: 'GET' });
+        const surveys = res.ok ? await res.json() : [];
+
+        if (inProgress) {
+            inProgress.innerHTML = '<h3>작업 중인 퀘스트</h3>';
+            if (!surveys.length) {
+                inProgress.innerHTML += '<div class="empty-quest-item">최근 작업한 설문이 없습니다.</div>';
+            } else {
+                const list = document.createElement('div');
+                surveys
+                    .slice()
+                    .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
+                    .slice(0, 5)
+                    .forEach(row => {
+                        const id = row.survey_id || row.id;
+                        let questions = row.questions;
+                        if (typeof questions === 'string') {
+                            try { questions = JSON.parse(questions); } catch { questions = []; }
+                        }
+                        const item = document.createElement('div');
+                        item.className = 'quest-item';
+                        item.innerHTML = `
+                            <div class="quest-avatar">📝</div>
+                            <div class="quest-info">
+                                <h4>${row.title || '제목 없음'}</h4>
+                                <div class="progress-bar"><div class="progress" style="width:0%"></div></div>
+                                <div style="font-size:0.9rem;color:#666;">문항 ${questions?.length || 0}개</div>
+                            </div>`;
+                        item.addEventListener('click', () => {
+                            window.location.href = `dashboard.html?surveyId=${id}`;
+                        });
+                        list.appendChild(item);
+                    });
+                inProgress.appendChild(list);
             }
-        });
+        }
 
-        const avgCompletion = counted ? Math.round(totalCompletionPct / counted) : 0;
-        stats.innerHTML = `
-            <h3>퀘스트 통계</h3>
-            <div class="stat-item"><span class="stat-value">${surveys.length}</span><span class="stat-label">총 퀘스트</span></div>
-            <div class="stat-item"><span class="stat-value">${totalResponses}</span><span class="stat-label">총 응답</span></div>
-            <div class="stat-item"><span class="stat-value">${avgCompletion}%</span><span class="stat-label">평균 완료율</span></div>
-        `;
-        stats.style.cursor = 'pointer';
-        stats.onclick = () => { window.location.href = 'analytics.html'; };
-    }
-
-    function calcCompletion(meta, responses) {
-        const qCount = meta.questions?.length || 0;
-        if (!responses.length || !qCount) return 0;
-        const completed = responses.filter(r => Array.isArray(r.answers) && r.answers.length === qCount).length;
-        return Math.round((completed / responses.length) * 100);
+        if (stats) {
+            stats.innerHTML = `
+                <h3>퀘스트 통계</h3>
+                <div class="stat-item"><span class="stat-value">${surveys.length}</span><span class="stat-label">총 퀘스트</span></div>
+                <div class="stat-item"><span class="stat-value">0</span><span class="stat-label">총 응답</span></div>
+                <div class="stat-item"><span class="stat-value">0%</span><span class="stat-label">평균 완료율</span></div>
+            `;
+            stats.style.cursor = 'pointer';
+            stats.onclick = () => { window.location.href = 'analytics.html'; };
+        }
+    } catch (e) {
+        if (inProgress) inProgress.innerHTML = '<h3>작업 중인 퀘스트</h3><div class="empty-quest-item">API 오류로 목록을 불러오지 못했습니다.</div>';
     }
 }
 
