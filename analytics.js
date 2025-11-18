@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     async getResults(surveyId) {
       const res = await fetch(`/api/results/${encodeURIComponent(surveyId)}`, { method: 'GET' });
-      if (!res.ok) throw new Error(`GET /api/results/${surveyId} ${res.status}`);
+      if (!res.ok) return [];
       return res.json();
     }
   };
@@ -45,7 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
     sel.innerHTML = '';
     const meta = state.surveys.find(s => s.id === surveyId);
     if (!meta) { sel.disabled = true; return; }
-    const eligible = (meta.questions || []).filter(q => !isNameQuestion(q) && Array.isArray(q.options) && q.options.length > 0);
+    const eligible = (meta.questions || []).filter(q => {
+      const opts = toOptionArray(q.options);
+      return !isNameQuestion(q) && opts.length > 0;
+    });
     if (eligible.length === 0) {
       sel.disabled = true;
       setOptionEmpty(true);
@@ -96,38 +99,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const qList = qListRaw.filter(q => !isNameQuestion(q));
     const completionRate = calcCompletionRate(survey, responses);
     const questions = qList.map((q, idx) => {
-      const answered = responses.filter(r => Array.isArray(r.answers) && r.answers.some(a => a.questionId === q.id)).length;
+      const answered = responses.filter(r => Array.isArray(r.answers) && r.answers.some(a => a.questionId == q.id)).length;
       const dropoffRate = total ? Math.round(((total - answered) / total) * 100) : 0;
 
       // Build distribution
       let dist = [];
       let textAnswers = [];
       if (q.type && (q.type === 'radio' || q.type === 'checkbox' || /객관식/.test(q.type))) {
-        // Collect option labels present in survey definition
-        const labels = Array.isArray(q.options) ? q.options : [];
-        const counts = new Map(labels.map(l => [String(l), 0]));
+        // Collect options (support objects or primitives)
+        const options = toOptionArray(q.options);
+        const counts = new Map(options.map(o => [String(o.value), 0]));
         responses.forEach(r => {
           (r.answers || []).forEach(a => {
-            if (a.questionId === q.id) {
+            if (a.questionId == q.id) {
               const v = Array.isArray(a.value) ? a.value : [a.value];
               v.forEach(val => {
                 const key = String(val);
-                counts.set(key, (counts.get(key) || 0) + 1);
+                // match by value or by label text
+                const match = options.find(o => String(o.value) === key || String(o.label) === key);
+                const k = match ? String(match.value) : key;
+                counts.set(k, (counts.get(k) || 0) + 1);
               });
             }
           });
         });
-        dist = labels.map(label => {
-          const count = counts.get(String(label)) || 0;
+        dist = options.map(o => {
+          const count = counts.get(String(o.value)) || 0;
           const percent = answered ? Math.round((count / answered) * 100) : 0;
-          return { label, count, percent };
+          return { label: o.label, count, percent };
         });
       } else {
         // Text or scale: gather raw values
         const vals = [];
         responses.forEach(r => {
           (r.answers || []).forEach(a => {
-            if (a.questionId === q.id && a.value != null && String(a.value).trim() !== '') {
+            if (a.questionId == q.id && a.value != null && String(a.value).trim() !== '') {
               vals.push(String(a.value));
             }
           });
@@ -296,20 +302,26 @@ document.addEventListener('DOMContentLoaded', () => {
   function getAnswerDistribution(surveyId, questionId) {
     const meta = state.surveys.find(s => s.id === surveyId);
     if (!meta) return { labels: [], counts: [] };
-    const q = (meta.questions || []).find(x => x.id === questionId);
-    if (!q || !Array.isArray(q.options) || q.options.length === 0) return { labels: [], counts: [] };
+    const q = (meta.questions || []).find(x => x.id == questionId);
+    const options = toOptionArray(q && q.options);
+    if (!q || options.length === 0) return { labels: [], counts: [] };
     const responses = state.responsesBySurvey[surveyId] || [];
-    const labels = q.options.map(o => String(o));
-    const counts = new Map(labels.map(l => [l, 0]));
+    const labels = options.map(o => String(o.label));
+    const counts = new Map(options.map(o => [String(o.value), 0]));
     responses.forEach(r => {
       (r.answers || []).forEach(a => {
-        if (a.questionId === q.id) {
+        if (a.questionId == q.id) {
           const vs = Array.isArray(a.value) ? a.value : [a.value];
-          vs.forEach(v => counts.set(String(v), (counts.get(String(v)) || 0) + 1));
+          vs.forEach(v => {
+            const key = String(v);
+            const match = options.find(o => String(o.value) === key || String(o.label) === key);
+            const k = match ? String(match.value) : key;
+            counts.set(k, (counts.get(k) || 0) + 1);
+          });
         }
       });
     });
-    return { labels, counts: labels.map(l => counts.get(l) || 0) };
+    return { labels, counts: options.map(o => counts.get(String(o.value)) || 0) };
   }
 
   function renderSelectedDropoutBar(surveyId){
@@ -485,8 +497,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof ansObj === 'string') {
         try { ansObj = JSON.parse(ansObj); } catch { ansObj = {}; }
       }
-      const arr = [];
-      if (ansObj && typeof ansObj === 'object') {
+      let arr = [];
+      if (Array.isArray(ansObj)) {
+        // already an array of {questionId, value}
+        arr = ansObj.map(a => ({ questionId: a.questionId, value: a.value }));
+      } else if (ansObj && typeof ansObj === 'object') {
         Object.keys(ansObj).forEach(qid => {
           const v = ansObj[qid];
           arr.push({ questionId: qid, value: v });
@@ -495,6 +510,18 @@ document.addEventListener('DOMContentLoaded', () => {
       out.push({ answers: arr, createdAt: row.created_at });
     });
     return out;
+  }
+
+  function toOptionArray(options) {
+    if (!Array.isArray(options)) return [];
+    return options.map((o, idx) => {
+      if (o && typeof o === 'object') {
+        const label = o.label ?? o.text ?? String(o.value ?? o.id ?? idx + 1);
+        const value = o.value ?? o.label ?? o.text ?? label;
+        return { label: String(label), value: String(value) };
+      }
+      return { label: String(o), value: String(o) };
+    });
   }
 
   function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
