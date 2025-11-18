@@ -40,16 +40,36 @@ export async function onRequestPatch({ params, request, env }) {
     }
 
     const updatedAt = new Date().toISOString();
-    const res = await env.surveyforge
+    await env.surveyforge
       .prepare(`UPDATE surveys SET status = ?, updated_at = ? WHERE survey_id = ?`)
       .bind(status, updatedAt, surveyId)
       .run();
 
-    if (!res || (res.success === false)) {
-      return Response.json({ error: 'Update failed' }, { status: 500 });
-    }
-
     return Response.json({ success: true, survey_id: surveyId, status, updated_at: updatedAt });
+  } catch (e) {
+    return Response.json({ error: 'DB error', detail: String(e?.message || e) }, { status: 500 });
+  }
+}
+
+export async function onRequestDelete({ params, env }) {
+  try {
+    await ensureTables(env);
+    const surveyId = params.id;
+    if (!surveyId) return Response.json({ error: 'Missing id' }, { status: 400 });
+
+    // Delete related results first
+    await env.surveyforge
+      .prepare(`DELETE FROM results WHERE survey_id = ?`)
+      .bind(surveyId)
+      .run();
+
+    // Delete the survey row
+    await env.surveyforge
+      .prepare(`DELETE FROM surveys WHERE survey_id = ?`)
+      .bind(surveyId)
+      .run();
+
+    return Response.json({ success: true, survey_id: surveyId });
   } catch (e) {
     return Response.json({ error: 'DB error', detail: String(e?.message || e) }, { status: 500 });
   }

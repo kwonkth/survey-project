@@ -49,6 +49,65 @@ function ensureDefaultNameQuestion() {
         questionBlocksContainer.appendChild(block);
     }
 
+    // AI 설문 생성 모달 제어 및 호출
+    const aiOpenBtn = document.getElementById('openAiGenModal');
+    const aiModal = document.getElementById('aiGenModal');
+    const aiClose = document.getElementById('aiGenClose');
+    const aiCancel = document.getElementById('aiGenCancel');
+    const aiGenerateBtn = document.getElementById('aiGenerateBtn');
+    const aiTopicInput = document.getElementById('aiTopicInput');
+    const aiQuestionCountInput = document.getElementById('aiQuestionCountInput');
+    const aiStyleSelect = document.getElementById('aiStyleSelect');
+    const aiIncludeNameInput = document.getElementById('aiIncludeNameInput');
+
+    function openAiModal(){ if (aiModal){ aiModal.style.display = 'block'; document.body.style.overflow = 'hidden'; } }
+    function closeAiModal(){ if (aiModal){ aiModal.style.display = 'none'; document.body.style.overflow = 'auto'; } }
+
+    if (aiOpenBtn) aiOpenBtn.addEventListener('click', openAiModal);
+    if (aiClose) aiClose.addEventListener('click', closeAiModal);
+    if (aiCancel) aiCancel.addEventListener('click', closeAiModal);
+
+    if (aiGenerateBtn) aiGenerateBtn.addEventListener('click', async () => {
+        const topic = aiTopicInput?.value?.trim();
+        const questionCount = parseInt(aiQuestionCountInput?.value || '5', 10);
+        const style_id = aiStyleSelect?.value || '';
+        const includeNameQuestion = !!aiIncludeNameInput?.checked;
+        if (!topic) { alert('설문 주제를 입력해주세요.'); return; }
+        aiGenerateBtn.disabled = true; aiGenerateBtn.textContent = '생성 중...';
+        try {
+            const res = await fetch('/api/generate-survey', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic, questionCount, style_id, includeNameQuestion })
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(()=>({}));
+                throw new Error(err?.error || `AI 생성 실패 (${res.status})`);
+            }
+            const data = await res.json();
+            // DB 저장 후 대시보드 이동
+            const surveyId = `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+            const now = new Date().toISOString();
+            await API.postSurvey({
+                survey_id: surveyId,
+                title: data.title || 'AI 생성 설문',
+                description: data.description || '',
+                questions: JSON.stringify(data.questions || []),
+                story: data.story_context ? JSON.stringify(data.story_context) : null,
+                status: 'draft',
+                created_at: now,
+                updated_at: now
+            });
+            closeAiModal();
+            window.location.href = `dashboard.html?surveyId=${surveyId}`;
+        } catch (e) {
+            console.error(e);
+            alert('AI 설문 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        } finally {
+            aiGenerateBtn.disabled = false; aiGenerateBtn.textContent = 'AI로 생성';
+        }
+    });
+
     updateChapterNumbers();
     validateSurvey();
 }

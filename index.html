@@ -29,12 +29,7 @@
                     <div class="dashboard-card new-survey">
                         <h2>새 설문조사 만들기</h2>
                         <p>마법의 퀘스트를 시작해보세요!</p>
-                        <button id="createNewSurvey" class="primary-btn">+ 새 퀘스트 시작</button>
-                        <div style="margin-top:0.75rem; display:flex; gap:8px; flex-wrap:wrap">
-                            <button id="uploadSurveyBtn" class="primary-btn">퀘스트 업로드</button>
-                            <button id="downloadSurveyTemplateBtn" class="primary-btn" style="background:#6b7280">양식 다운로드 (JSON)</button>
-                            <input id="surveyUploadInput" type="file" accept=".json" hidden />
-                        </div>
+                        <button id="openAiGenModal" class="primary-btn">✨ AI 설문 만들기 시작</button>
                     </div>
 
                     <div class="dashboard-card" id="inProgressQuestContainer">
@@ -178,6 +173,40 @@
     </div>
 
     <script src="script.js"></script>
+
+    <!-- AI 설문 생성 모달 -->
+    <div id="aiGenModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="aiGenClose">&times;</span>
+        <h2>AI 설문 생성</h2>
+        <div class="form-group">
+          <label>설문 주제</label>
+          <input type="text" id="aiTopicInput" class="form-control" placeholder="예: 직장인 스트레스 검사" />
+        </div>
+        <div class="form-group">
+          <label>문항 수 (1~10)</label>
+          <input type="number" id="aiQuestionCountInput" class="form-control" min="1" max="10" value="5" />
+        </div>
+        <div class="form-group">
+          <label>분위기 스타일</label>
+          <select id="aiStyleSelect" class="form-control">
+            <option value="">기본</option>
+            <option value="epic_fantasy">장엄한 판타지</option>
+            <option value="romance">로맨스</option>
+            <option value="horror">호러</option>
+          </select>
+          <div style="font-size:0.85rem;color:#6b7280; margin-top:6px;">/styles/{style_id}.json 이 존재하면 해당 템플릿을 추가 반영합니다.</div>
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="aiIncludeNameInput" />
+          <label for="aiIncludeNameInput" style="margin:0;">이름 문항 포함하기</label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" id="aiGenCancel">취소</button>
+          <button class="btn btn-primary" id="aiGenerateBtn">AI로 생성</button>
+        </div>
+      </div>
+    </div>
 
     <script>
         function navigateTo(page) {
