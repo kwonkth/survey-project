@@ -15,47 +15,6 @@ let lastCreatedSurveyId = '';
 let currentSurveyId = null;
 let aiGeneratedSurvey = null;
 
-function ensureDefaultNameQuestion() {
-    if (!questionBlocksContainer) return;
-
-    const existing = questionBlocksContainer.querySelector('.question-block[data-default-name="1"]');
-    if (existing) return;
-
-    const block = document.createElement('div');
-    block.className = 'question-block default-name';
-    block.dataset.defaultName = '1';
-    block.innerHTML = `
-        <div class="question-header">
-            <h3>Chapter 1</h3>
-            <div class="question-actions">
-                <button class="btn-icon">🎨</button>
-            </div>
-        </div>
-        <div class="form-group">
-            <label>NPC 대사</label>
-            <textarea class="form-control" rows="2">모험가여, 당신의 이름을 알려주세요.</textarea>
-        </div>
-        <div class="form-group">
-            <label>답변 유형</label>
-            <select class="form-control">
-                <option selected>주관식 (자유 기록)</option>
-                <option>객관식 (단일 선택)</option>
-            </select>
-        </div>
-    `;
-
-    const addBtn = questionBlocksContainer.querySelector('.add-chapter');
-    if (addBtn) {
-        questionBlocksContainer.insertBefore(block, addBtn);
-    } else {
-        questionBlocksContainer.appendChild(block);
-    }
-
-    updateChapterNumbers();
-    validateSurvey();
-}
-
-
 /* =======================================================
    초기화 – DOMContentLoaded
 ======================================================= */
@@ -657,7 +616,6 @@ function openSurveyModal() {
     surveyModal.style.display = "block";
     document.body.style.overflow = "hidden";
     setActiveStep(1);
-    ensureDefaultNameQuestion();
 }
 
 function closeSurveyModal() {
@@ -912,7 +870,7 @@ async function renderMainDashboard() {
         const surveys = res.ok ? await res.json() : [];
 
         if (inProgress) {
-            inProgress.innerHTML = '<h3>작업 중인 퀘스트</h3>';
+            inProgress.innerHTML = '<h3> 설문 관리</h3>';
             if (!surveys.length) {
                 inProgress.innerHTML += '<div class="empty-quest-item">최근 작업한 설문이 없습니다.</div>';
             } else {
@@ -947,7 +905,7 @@ async function renderMainDashboard() {
 
         if (stats) {
             stats.innerHTML = `
-                <h3>퀘스트 통계</h3>
+                <h3> 설문 통계 </h3>
                 <div class="stat-item"><span class="stat-value">${surveys.length}</span><span class="stat-label">총 퀘스트</span></div>
                 <div class="stat-item"><span class="stat-value">0</span><span class="stat-label">총 응답</span></div>
                 <div class="stat-item"><span class="stat-value">0%</span><span class="stat-label">평균 완료율</span></div>
