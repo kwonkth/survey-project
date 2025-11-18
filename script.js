@@ -394,6 +394,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 aiPreviewSaveBtn.disabled = false;
                 aiPreviewSaveBtn.textContent = prevText;
             }
+        });
+    }
+
 function importSurveysFromJSON(json) {
     // 입력 형태: { surveys: [...] } 또는 단일 설문 객체 또는 설문 배열 허용
     let surveys = [];
