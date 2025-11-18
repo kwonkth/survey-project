@@ -3,11 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Chart.register(ChartDataLabels);
     }
 
-    const STORAGE_PREFIX = 'surveyGuide';
-    const STORAGE_KEYS = {
-        folders: `${STORAGE_PREFIX}.folders`
-    };
-
+    // No persistence; folders are in-memory defaults only
     const API = {
         async getSurveys() {
             const res = await fetch('/api/surveys', { method: 'GET' });
@@ -30,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         surveys: [],
         surveyMap: new Map(),
         resultCounts: new Map(),
-        folders: [],
+        folders: [], // in-memory only
         folderMap: new Map(),
         selectedFolder: 'all',
         currentFilter: 'all',
@@ -57,15 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadFolders() {
-        try {
-            const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.folders) || '[]');
-            state.folders = stored.length > 0 ? stored : getDefaultFolders();
-        } catch {
-            state.folders = getDefaultFolders();
-        }
+        state.folders = getDefaultFolders();
         state.folderMap.clear();
         state.folders.forEach(folder => state.folderMap.set(folder.id, folder));
-        saveFolders();
     }
 
     function getDefaultFolders() {
@@ -120,9 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     }
 
-    function saveFolders() {
-        try { localStorage.setItem(STORAGE_KEYS.folders, JSON.stringify(state.folders)); } catch {}
-    }
+    function saveFolders() { /* no-op (no persistence) */ }
 
     function renderFolders() {
         const folderList = document.getElementById('folderList');
@@ -203,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderSurveys() {
-        const surveyGrid = document.getElementById('surveyGrid');
+        const surveyGrid = document.getElementById('surveyListContainer');
         const emptyState = document.getElementById('emptyState');
         
         let filtered = state.surveys;
@@ -611,13 +599,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function openSurveyMenu(surveyId) {
         // Placeholder for context menu
         // Simple alert menu for now
-        const choice = prompt('작업 선택:\n1. 편집\n2. 결과 보기\n3. 공유\n4. 삭제\n5. JSON 내보내기\n6. 모든 설문 폴더로 내보내기');
+        const choice = prompt('작업 선택:\n1. 편집\n2. 결과 보기\n3. 공유\n4. 삭제');
         if (choice === '1') editSurvey(surveyId);
         else if (choice === '2') viewResults(surveyId);
         else if (choice === '3') shareSurvey(surveyId);
         else if (choice === '4') deleteSurvey(surveyId);
-        else if (choice === '5') exportSurvey(surveyId);
-        else if (choice === '6') exportAllToDirectory();
     }
 
     async function deleteSurvey(surveyId) {
@@ -633,68 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Export a single survey detail JSON as a downloadable file
-    function exportSurvey(surveyId) {
-        try {
-            const survey = state.surveyMap.get(surveyId);
-            if (!survey) { alert('설문 데이터를 찾을 수 없습니다.'); return; }
-            const blob = new Blob([JSON.stringify(survey, null, 2)], { type: 'application/json;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${surveyId}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        } catch (e) {
-            console.error('Export failed', e);
-            alert('내보내기 중 오류가 발생했습니다.');
-        }
-    }
-
-    // Export all surveys as individual JSON files (multiple downloads)
-    function exportAllSurveys() {
-        if (!confirm('모든 설문을 개별 JSON 파일로 내보냅니다. 진행할까요?')) return;
-        state.surveys.forEach(meta => exportSurvey(meta.id));
-    }
-
-    // Resolve the data directory under a chosen directory (use it directly if already named 'data')
-    async function getTargetDataDir(dirHandle) {
-        try {
-            if (dirHandle && typeof dirHandle.name === 'string' && dirHandle.name.toLowerCase() === 'data') {
-                return dirHandle; // already in data/
-            }
-        } catch {}
-        return await dirHandle.getDirectoryHandle('data', { create: true });
-    }
-
-    // Export all surveys into a user-selected folder using the File System Access API (Chromium-based browsers)
-    async function exportAllToDirectory() {
-        try {
-            if (!window.showDirectoryPicker) {
-                alert('이 브라우저에서는 폴더 내보내기를 지원하지 않습니다. (Chrome/Edge 권장)');
-                return;
-            }
-            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-            // If user picked data/, use it; otherwise create/get data under the selected directory
-            const dataDirHandle = await getTargetDataDir(dirHandle);
-
-            for (const meta of state.surveys) {
-                const id = meta.id;
-                let jsonStr = JSON.stringify(meta);
-                const fileHandle = await dataDirHandle.getFileHandle(`${id}.json`, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(new Blob([jsonStr], { type: 'application/json;charset=utf-8' }));
-                await writable.close();
-            }
-            alert('모든 설문이 선택한 폴더의 data/에 저장되었습니다. (프로젝트 루트 data/로 커밋/배포하세요)');
-        } catch (e) {
-            if (e && e.name === 'AbortError') return;
-            console.error('폴더 내보내기 실패', e);
-            alert('폴더 내보내기 중 오류가 발생했습니다. 권한을 확인해주세요.');
-        }
-    }
+    // Legacy export functions removed in DB-only mode
 
     function navigateTo(page) {
         window.location.href = page;
@@ -713,13 +638,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.createFolder = createFolder;
     window.renameFolder = renameFolder;
     window.deleteFolder = deleteFolder;
-    window.exportSurvey = exportSurvey;
-    window.exportAllSurveys = exportAllSurveys;
-    window.exportAllToDirectory = exportAllToDirectory;
+    // exports removed
 
-    // Utility functions
-    function readJSON() { return null; }
-    function writeJSON() {}
+    // Utility functions (reduced)
 
     function formatDate(date) {
         if (!date) return '-';

@@ -3,9 +3,23 @@ document.addEventListener('DOMContentLoaded', () => {
     Chart.register(ChartDataLabels);
   }
 
+  // API helpers
+  const API = {
+    async getSurveys() {
+      const res = await fetch('/api/surveys', { method: 'GET' });
+      if (!res.ok) throw new Error(`GET /api/surveys ${res.status}`);
+      return res.json();
+    },
+    async getResults(surveyId) {
+      const res = await fetch(`/api/results/${encodeURIComponent(surveyId)}`, { method: 'GET' });
+      if (!res.ok) throw new Error(`GET /api/results/${surveyId} ${res.status}`);
+      return res.json();
+    }
+  };
+
   // Populate survey selector and render per-survey stats
   function populateSurveySelect() {
-    const sel = document.getElementById('surveySelect');
+    const sel = document.getElementById('surveySelector');
     if (!sel) return;
     sel.innerHTML = '';
     const placeholder = document.createElement('option');
@@ -88,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Build distribution
       let dist = [];
       let textAnswers = [];
-      if (q.type && q.type.includes('객관식')) {
+      if (q.type && (q.type === 'radio' || q.type === 'checkbox' || /객관식/.test(q.type))) {
         // Collect option labels present in survey definition
         const labels = Array.isArray(q.options) ? q.options : [];
         const counts = new Map(labels.map(l => [String(l), 0]));
@@ -242,56 +256,41 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
   }
 
-  const STORAGE_PREFIX = 'surveyGuide';
-  const STORAGE_KEYS = {
-    surveyIndex: `${STORAGE_PREFIX}.surveyIndex`,
-    surveyResponses: (id) => `${STORAGE_PREFIX}.responses.${id}`
-  };
-
   const state = {
     surveys: [],
     chartInstance: null,
     selectedSurveyId: null,
     latestStats: null,
     selectedDropoutChart: null,
-    doughnutChart: null
+    doughnutChart: null,
+    responsesBySurvey: {}
   };
 
   init();
 
   function init() {
-    state.surveys = readJSON(STORAGE_KEYS.surveyIndex, []);
-    populateSurveySelect();
-    updateSummary();
-    const params = new URLSearchParams(window.location.search);
-    const preselectId = params.get('surveyId');
-    if (preselectId && state.surveys.some(s => s.id === preselectId)) {
-      state.selectedSurveyId = preselectId;
-      const sel = document.getElementById('surveySelect');
-      if (sel) sel.value = preselectId;
-      onSurveySelected(preselectId);
-    }
-    wireExports();
+    loadSurveysFromDB().then(() => {
+      populateSurveySelect();
+      updateSummary();
+      const params = new URLSearchParams(window.location.search);
+      const preselectId = params.get('surveyId');
+      if (preselectId && state.surveys.some(s => s.id === preselectId)) {
+        state.selectedSurveyId = preselectId;
+        const sel = document.getElementById('surveySelector');
+        if (sel) sel.value = preselectId;
+        onSurveySelected(preselectId);
+      }
+      wireExports();
+    }).catch(() => {
+      // leave empty state
+    });
   }
 
-  function updateSummary() {
-    let totalResponses = 0;
-    let totalCompletion = 0;
-    let counted = 0;
-
-    state.surveys.forEach((survey) => {
-      const responses = readJSON(STORAGE_KEYS.surveyResponses(survey.id), []);
-      totalResponses += responses.length;
-      if (responses.length > 0) {
-        totalCompletion += calcCompletionRate(survey, responses);
-        counted += 1;
-      }
-    });
-
-    const avgCompletion = counted ? Math.round(totalCompletion / counted) : 0;
-    setText('totalResponsesValue', totalResponses);
-    setText('completionRateValue', `${avgCompletion}%`);
-    setText('dropoffRateValue', `${100 - avgCompletion}%`);
+  async function updateSummary() {
+    // Lightweight summary: show totals of surveys; responses populated on selection
+    setText('totalResponsesValue', '0');
+    setText('completionRateValue', '0%');
+    setText('dropoffRateValue', '0%');
   }
 
   function getAnswerDistribution(surveyId, questionId) {
@@ -299,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!meta) return { labels: [], counts: [] };
     const q = (meta.questions || []).find(x => x.id === questionId);
     if (!q || !Array.isArray(q.options) || q.options.length === 0) return { labels: [], counts: [] };
-    const responses = readJSON(STORAGE_KEYS.surveyResponses(surveyId), []);
+    const responses = state.responsesBySurvey[surveyId] || [];
     const labels = q.options.map(o => String(o));
     const counts = new Map(labels.map(l => [l, 0]));
     responses.forEach(r => {
@@ -315,9 +314,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderSelectedDropoutBar(surveyId){
     const meta = state.surveys.find(s => s.id === surveyId);
-    const ctx = document.getElementById('selectedDropoutChart');
+    const ctx = document.getElementById('chart1');
     if (!meta || !ctx) return;
-    const responses = readJSON(STORAGE_KEYS.surveyResponses(surveyId), []);
+    const responses = state.responsesBySurvey[surveyId] || [];
     const qList = (meta.questions || []).filter(q => !isNameQuestion(q));
     const labels = qList.map((q, i) => `Q${i+1}`);
     const totals = responses.length;
@@ -334,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderOptionDoughnut(surveyId, questionId){
-    const ctx = document.getElementById('overallDoughnutChart');
+    const ctx = document.getElementById('chart2');
     const optionEmpty = document.getElementById('optionEmpty');
     if (!ctx) return;
     const { labels, counts } = getAnswerDistribution(surveyId, questionId);
@@ -365,9 +364,25 @@ document.addEventListener('DOMContentLoaded', () => {
       setDropoutEmpty(true); setOptionEmpty(true);
       return;
     }
-    renderSelectedDropoutBar(surveyId);
-    setDropoutEmpty(false);
-    populateQuestionSelect(surveyId);
+    // Load results for this survey from DB then render
+    API.getResults(surveyId).then(rows => {
+      const responses = normalizeResultsRows(rows);
+      state.responsesBySurvey[surveyId] = responses;
+      // compute and cache stats for exports
+      const meta = state.surveys.find(s => s.id === surveyId) || { id: surveyId, title: '' };
+      const stats = computeSurveyStats(meta, responses);
+      state.latestStats = { surveyId, title: meta.title, ...stats };
+
+      renderSelectedDropoutBar(surveyId);
+      setDropoutEmpty(false);
+      populateQuestionSelect(surveyId);
+    }).catch(() => {
+      // failure state: clear visuals
+      if (state.selectedDropoutChart) { state.selectedDropoutChart.destroy(); state.selectedDropoutChart = null; }
+      if (state.doughnutChart) { state.doughnutChart.destroy(); state.doughnutChart = null; }
+      setDropoutEmpty(true); setOptionEmpty(true);
+      state.latestStats = null;
+    });
   }
 
   function renderDropoff(items) {
@@ -449,8 +464,37 @@ document.addEventListener('DOMContentLoaded', () => {
     return Math.round((completed / responses.length) * 100);
   }
 
-  function readJSON(key, def) {
-    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; }
+  async function loadSurveysFromDB() {
+    const rows = await API.getSurveys();
+    state.surveys = (rows || []).map(r => {
+      let questions = r.questions;
+      if (typeof questions === 'string') { try { questions = JSON.parse(questions); } catch { questions = []; } }
+      return {
+        id: r.survey_id || r.id,
+        title: r.title || '',
+        questions: questions || []
+      };
+    });
+  }
+
+  function normalizeResultsRows(rows) {
+    // rows: [{answers: TEXT/JSON, created_at, ...}] -> [{answers: [{questionId, value}], createdAt}]
+    const out = [];
+    (rows || []).forEach(row => {
+      let ansObj = row.answers;
+      if (typeof ansObj === 'string') {
+        try { ansObj = JSON.parse(ansObj); } catch { ansObj = {}; }
+      }
+      const arr = [];
+      if (ansObj && typeof ansObj === 'object') {
+        Object.keys(ansObj).forEach(qid => {
+          const v = ansObj[qid];
+          arr.push({ questionId: qid, value: v });
+        });
+      }
+      out.push({ answers: arr, createdAt: row.created_at });
+    });
+    return out;
   }
 
   function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }

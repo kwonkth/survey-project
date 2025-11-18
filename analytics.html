@@ -28,8 +28,8 @@
         <div class="dashboard-card">
           <h3>설문 및 문항 선택</h3>
           <div class="analytics-toolbar">
-            <label for="surveySelect" style="min-width:90px;">설문 선택</label>
-            <select id="surveySelect" class="form-control" style="min-width:260px;"></select>
+            <label for="surveySelector" style="min-width:90px;">설문 선택</label>
+            <select id="surveySelector" class="form-control" style="min-width:260px;"></select>
             <label for="questionSelect" style="min-width:90px; margin-left:12px;">문항 선택</label>
             <select id="questionSelect" class="form-control" style="min-width:260px;"></select>
             <div style="margin-left:auto; display:flex; gap:0.5rem; flex-wrap:wrap;">
@@ -42,16 +42,17 @@
 
         <div class="dashboard-card" id="selectedDropoutContainer">
           <h3>문항별 이탈 지점 (막대그래프)</h3>
-          <div style="height:300px"><canvas id="selectedDropoutChart"></canvas></div>
+          <div style="height:300px"><canvas id="chart1"></canvas></div>
           <div class="empty-state" id="dropoutEmpty" style="display:none; margin-top:0.5rem;">선택한 설문의 문항이 없습니다.</div>
         </div>
 
         <div class="dashboard-card" id="overallDoughnutContainer">
           <h3>선택한 문항 – 선택지 분포 (이름 문항 제외)</h3>
-          <div style="height:300px"><canvas id="overallDoughnutChart"></canvas></div>
+          <div style="height:300px"><canvas id="chart2"></canvas></div>
           <div class="empty-state" id="optionEmpty" style="display:none; margin-top:0.5rem;">선택지 기반 문항을 선택하세요.</div>
         </div>
       </section>
+      <div id="analyticsOutput" style="display:none;"></div>
     </main>
   </div>
 
