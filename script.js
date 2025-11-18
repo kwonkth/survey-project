@@ -457,23 +457,12 @@ function importSurveysFromJSON(json) {
             const input = document.getElementById("shareLinkInput");
             const text = input?.value || "";
 
-            if (!currentSurveyId) {
-                alert("설문 정보가 올바르지 않습니다. 다시 시도해주세요.");
+            if (!text) {
+                alert("복사할 링크가 없습니다.");
                 return;
             }
 
             try {
-                const res = await fetch(`/api/surveys/${currentSurveyId}`);
-                if (!res.ok) {
-                    throw new Error("failed to load survey");
-                }
-                const survey = await res.json();
-
-                if (survey.status !== "published") {
-                    alert("⚠️ 이 설문은 이미 종료되었거나 아직 배포되지 않아 공유할 수 없습니다.");
-                    return;
-                }
-
                 if (navigator.clipboard && window.isSecureContext) {
                     await navigator.clipboard.writeText(text);
                 } else {
@@ -486,7 +475,7 @@ function importSurveysFromJSON(json) {
                 setTimeout(() => { copyBtn.textContent = prev; copyBtn.disabled = false; }, 1200);
             } catch (e) {
                 console.error(e);
-                alert("링크를 공유할 수 없습니다. 잠시 후 다시 시도해주세요.");
+                alert("링크를 복사하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
             }
         });
     }

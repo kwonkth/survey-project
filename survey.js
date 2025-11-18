@@ -75,6 +75,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const questionContainer = document.getElementById('questionContainer');
         const optionsContainer = document.getElementById('optionsContainer');
+        const progressEl = document.getElementById('progress');
+
+        // 진행 상황 표시: 총 N문항 중 M번째
+        if (progressEl && state.survey.questions.length) {
+            const total = state.survey.questions.length;
+            const current = state.currentQuestionIndex + 1;
+            progressEl.textContent = `${total}문항 중 ${current}번째`;
+        }
 
         questionContainer.innerHTML = `<p>${question.text}</p>`;
         optionsContainer.innerHTML = '';
@@ -101,16 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.onclick = () => handleOptionClick(optionText, question.type);
                 optionsContainer.appendChild(button);
             });
-            // 마지막 문항에는 완료 버튼 제공
-            if (isLast) {
-                const finishBtn = document.createElement('button');
-                finishBtn.id = 'finishSurveyBtn';
-                finishBtn.textContent = '설문 완료';
-                finishBtn.className = 'submit-btn';
-                finishBtn.style.marginTop = '1rem';
-                finishBtn.onclick = finalizeSurvey;
-                optionsContainer.appendChild(finishBtn);
-            }
         } else if (question.type === 'text') {
             const textInput = document.createElement('input');
             textInput.type = 'text';
@@ -123,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.className = 'submit-btn';
             submitBtn.onclick = () => {
                 handleTextSubmit(textInput.value);
-                if (isLast) finalizeSurvey();
             };
             optionsContainer.appendChild(submitBtn);
         }
@@ -192,13 +189,24 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="background"></div>
             <div class="completion-screen">
                 <h2>참여해주셔서 감사합니다.</h2>
-                <p>모든 답변이 기록되었습니다.</p>
+                <p>모든 답변이 준비되었습니다. 아래 버튼을 눌러 저장을 완료하세요.</p>
+                <button id="saveResultsBtn" class="submit-btn">저장하기</button>
             </div>
         `;
-        // 저장은 finalizeSurvey에서 수행됨
+
+        const saveBtn = document.getElementById('saveResultsBtn');
+        if (saveBtn) {
+            saveBtn.onclick = finalizeSurvey;
+        }
     }
 
     async function finalizeSurvey() {
+        const saveBtn = document.getElementById('saveResultsBtn');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = '저장 중...';
+        }
+
         try {
             const created_at = new Date().toISOString();
             const result_id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `r_${Date.now().toString(36)}${Math.random().toString(36).slice(2,8)}`;
@@ -209,10 +217,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 answers: state.answers,
                 created_at
             });
+            if (saveBtn) {
+                saveBtn.textContent = '저장 완료';
+            }
         } catch (e) {
             console.error('응답 저장 중 오류', e);
-        } finally {
-            showCompletionScreen();
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '저장하기';
+            }
         }
     }
 
