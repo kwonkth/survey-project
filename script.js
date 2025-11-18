@@ -122,29 +122,31 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // AI 설문 생성 모달 열기/닫기 및 생성 처리
+    // AI 설문 생성 모달 & 미리보기 모달 제어
     const aiGenModal = document.getElementById('aiGenModal');
     const openAiGenBtn = document.getElementById('openAiGenModal');
     const aiGenClose = document.getElementById('aiGenClose');
     const aiGenCancel = document.getElementById('aiGenCancel');
     const aiGenerateBtn = document.getElementById('aiGenerateBtn');
-    const aiSaveBtn = document.getElementById('aiSaveBtn');
-    const aiResetPreviewBtn = document.getElementById('aiResetPreviewBtn');
     const aiTopicInput = document.getElementById('aiTopicInput');
     const aiQuestionCountInput = document.getElementById('aiQuestionCountInput');
     const aiQuestionTypeSelect = document.getElementById('aiQuestionTypeSelect');
     const aiStyleSelect = document.getElementById('aiStyleSelect');
     const aiIncludeNameInput = document.getElementById('aiIncludeNameInput');
-    const aiPreviewSection = document.getElementById('aiPreviewSection');
-    const aiPreviewTitle = document.getElementById('aiPreviewTitle');
-    const aiPreviewDesc = document.getElementById('aiPreviewDesc');
-    const aiPreviewList = document.getElementById('aiPreviewList');
+    const aiMandatoryQuestionsInput = document.getElementById('aiMandatoryQuestionsInput');
+
+    const aiPreviewModal = document.getElementById('aiPreviewModal');
+    const aiPreviewClose = document.getElementById('aiPreviewClose');
+    const aiPreviewCancelBtn = document.getElementById('aiPreviewCancelBtn');
+    const aiPreviewSaveBtn = document.getElementById('aiPreviewSaveBtn');
+    const aiPreviewModalTitle = document.getElementById('aiPreviewModalTitle');
+    const aiPreviewModalDesc = document.getElementById('aiPreviewModalDesc');
+    const aiPreviewQuestionContainer = document.getElementById('aiPreviewQuestionContainer');
 
     function openAiModal() {
         if (aiGenModal) {
             aiGenModal.style.display = 'block';
             document.body.style.overflow = 'hidden';
-            resetAiPreview();
         }
     }
 
@@ -152,35 +154,74 @@ document.addEventListener("DOMContentLoaded", () => {
         if (aiGenModal) {
             aiGenModal.style.display = 'none';
             document.body.style.overflow = 'auto';
-            resetAiPreview();
         }
     }
 
-    function resetAiPreview() {
-        aiGeneratedSurvey = null;
-        if (aiPreviewSection) {
-            aiPreviewSection.style.display = 'none';
-        }
-        if (aiPreviewTitle) aiPreviewTitle.textContent = '-';
-        if (aiPreviewDesc) aiPreviewDesc.textContent = '-';
-        if (aiPreviewList) aiPreviewList.innerHTML = '';
-        if (aiSaveBtn) {
-            aiSaveBtn.disabled = true;
-            aiSaveBtn.textContent = 'DB 저장 & 링크 생성';
-        }
+    function openAiPreviewModal() {
+        if (!aiPreviewModal || !aiGeneratedSurvey) return;
+
+        // 제목/설명
+        aiPreviewModalTitle.textContent = aiGeneratedSurvey.title || '제목 없음';
+        aiPreviewModalDesc.textContent = aiGeneratedSurvey.description || '설명 없음';
+
+        // 질문 목록 렌더링 (간단 편집 UI)
+        const questions = Array.isArray(aiGeneratedSurvey.questions) ? aiGeneratedSurvey.questions : [];
+        aiPreviewQuestionContainer.innerHTML = '';
+
+        questions.forEach((q, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'ai-preview-question';
+
+            const safeText = String(q.text || '').trim();
+            const safeType = ['radio', 'checkbox', 'text'].includes(q.type) ? q.type : 'text';
+            const safeOptions = Array.isArray(q.options) ? q.options.map(o => String(o)) : [];
+            const isRequired = q.required !== false;
+
+            wrapper.innerHTML = `
+                <div class="form-group">
+                    <label>Q${index + 1}. 질문 내용</label>
+                    <input type="text" class="form-control ai-q-text" value="${safeText.replace(/"/g, '&quot;')}">
+                </div>
+                <div class="form-group">
+                    <label>질문 유형</label>
+                    <select class="form-control ai-q-type">
+                        <option value="radio" ${safeType === 'radio' ? 'selected' : ''}>객관식 (단일 선택)</option>
+                        <option value="checkbox" ${safeType === 'checkbox' ? 'selected' : ''}>객관식 (복수 선택)</option>
+                        <option value="text" ${safeType === 'text' ? 'selected' : ''}>서술형</option>
+                    </select>
+                </div>
+                <div class="form-group ai-q-options-group" ${safeType === 'text' ? 'style="display:none;"' : ''}>
+                    <label>보기 옵션 (줄바꿈으로 구분)</label>
+                    <textarea class="form-control ai-q-options" rows="3">${safeOptions.join('\n')}</textarea>
+                </div>
+                <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" class="ai-q-required" ${isRequired ? 'checked' : ''} />
+                    <span>필수 질문</span>
+                </div>
+            `;
+
+            // 유형 변경 시 옵션 영역 토글
+            const typeSelect = wrapper.querySelector('.ai-q-type');
+            const optionsGroup = wrapper.querySelector('.ai-q-options-group');
+            typeSelect.addEventListener('change', () => {
+                if (typeSelect.value === 'text') {
+                    optionsGroup.style.display = 'none';
+                } else {
+                    optionsGroup.style.display = '';
+                }
+            });
+
+            aiPreviewQuestionContainer.appendChild(wrapper);
+        });
+
+        aiPreviewModal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
     }
 
-    function renderAiPreview(preview) {
-        if (!preview || !aiPreviewSection) return;
-        aiPreviewTitle.textContent = preview.title || '제목 없음';
-        aiPreviewDesc.textContent = preview.description || '설명 없음';
-        const questions = Array.isArray(preview.questions) ? preview.questions : [];
-        aiPreviewList.innerHTML = questions.length
-            ? questions.map(q => `<li>${q.order}. ${q.text}</li>`).join('')
-            : '<li>생성된 문항이 없습니다.</li>';
-        aiPreviewSection.style.display = 'block';
-        if (aiSaveBtn) {
-            aiSaveBtn.disabled = false;
+    function closeAiPreviewModal() {
+        if (aiPreviewModal) {
+            aiPreviewModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
         }
     }
 
@@ -198,6 +239,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === aiGenModal) {
             closeAiModal();
         }
+        if (e.target === aiPreviewModal) {
+            closeAiPreviewModal();
+        }
     });
 
     if (aiGenerateBtn) {
@@ -207,19 +251,46 @@ document.addEventListener("DOMContentLoaded", () => {
             const style_id = aiStyleSelect?.value || '';
             const includeNameQuestion = !!aiIncludeNameInput?.checked;
 
+            const questionTypeLabel = aiQuestionTypeSelect?.value || '혼합';
+            let questionTypeMode = 'auto';
+            if (questionTypeLabel.includes('2지선다')) questionTypeMode = 'fixed_two';
+            else if (questionTypeLabel.includes('4지선다')) questionTypeMode = 'fixed_four';
+            else if (questionTypeLabel.includes('혼합')) questionTypeMode = 'mixed';
+
+            const styleLabel = aiStyleSelect?.selectedOptions?.[0]?.textContent?.trim() || '';
+            const mandatoryRaw = aiMandatoryQuestionsInput?.value || '';
+            const mandatoryQuestions = mandatoryRaw
+                .split('\n')
+                .map(v => v.trim())
+                .filter(Boolean);
+
             if (!topic) {
                 alert('설문 주제를 입력해주세요.');
                 return;
             }
 
+            if (!Number.isFinite(questionCount) || questionCount < 1) {
+                alert('문항 수를 올바르게 입력해주세요.');
+                return;
+            }
+
             aiGenerateBtn.disabled = true;
+            const originalText = aiGenerateBtn.textContent;
             aiGenerateBtn.textContent = '생성 중...';
 
             try {
                 const res = await fetch('/api/generate-survey', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ topic, questionCount, style_id, includeNameQuestion })
+                    body: JSON.stringify({
+                        topic,
+                        questionCount,
+                        style: styleLabel,
+                        style_id,
+                        includeNameQuestion,
+                        questionTypeMode,
+                        mandatoryQuestions
+                    })
                 });
 
                 if (!res.ok) {
@@ -228,68 +299,101 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 const data = await res.json();
-                const surveyId = `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-                const now = new Date().toISOString();
-
-                await API.postSurvey({
-                    survey_id: surveyId,
-                    title: data.title || 'AI 생성 설문',
-                    description: data.description || '',
-                    questions: JSON.stringify(data.questions || []),
-                    story: data.story_context ? JSON.stringify(data.story_context) : null,
-                    status: 'draft',
-                    created_at: now,
-                    updated_at: now
-                });
-
+                aiGeneratedSurvey = data;
                 closeAiModal();
-                window.location.href = `dashboard.html?surveyId=${surveyId}`;
+                openAiPreviewModal();
             } catch (e) {
                 console.error(e);
                 alert('AI 설문 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
             } finally {
                 aiGenerateBtn.disabled = false;
-                aiGenerateBtn.textContent = 'AI로 생성';
+                aiGenerateBtn.textContent = originalText;
             }
         });
     }
 
-
-/* =======================================================
-   설문 템플릿 생성 및 JSON 임포트
-======================================================= */
-function createSurveyTemplate() {
-    return {
-        surveys: [
-            {
-                id: "", // 비워두면 자동 생성됩니다
-                title: "예시 퀘스트 제목",
-                description: "이곳에 퀘스트 설명을 작성합니다.",
-                status: "active", // draft | active | closed
-                folderId: null,
-                questions: [
-                    {
-                        id: "", // 비워두면 자동 생성됩니다
-                        order: 1,
-                        text: "모험가여, 당신의 이름을 알려주세요.",
-                        type: "text", // text | radio | checkbox | scale
-                        required: true,
-                        options: []
-                    },
-                    {
-                        id: "",
-                        order: 2,
-                        text: "이 퀘스트에 참여하시겠습니까?",
-                        type: "radio",
-                        required: true,
-                        options: ["예", "아니오"]
-                    }
-                ]
+    if (aiPreviewSaveBtn) {
+        aiPreviewSaveBtn.addEventListener('click', async () => {
+            if (!aiGeneratedSurvey) {
+                alert('먼저 AI로 설문을 생성해주세요.');
+                return;
             }
-        ]
-    };
-}
 
+            // 미리보기에서 수정된 값으로 질문 재구성
+            const rows = aiPreviewQuestionContainer?.querySelectorAll('.ai-preview-question') || [];
+            const updatedQuestions = [];
+
+            rows.forEach((row, index) => {
+                const textInput = row.querySelector('.ai-q-text');
+                const typeSelect = row.querySelector('.ai-q-type');
+                const optionsTextarea = row.querySelector('.ai-q-options');
+                const requiredCheckbox = row.querySelector('.ai-q-required');
+
+                const base = Array.isArray(aiGeneratedSurvey.questions) ? aiGeneratedSurvey.questions[index] || {} : {};
+                const type = typeSelect?.value || base.type || 'text';
+                const text = textInput?.value?.trim() || base.text || `문항 ${index + 1}`;
+                let options = [];
+                if (type === 'radio' || type === 'checkbox') {
+                    const raw = optionsTextarea?.value || '';
+                    options = raw.split('\n').map(v => v.trim()).filter(Boolean);
+                }
+                const required = !!requiredCheckbox?.checked;
+
+                updatedQuestions.push({
+                    id: base.id || `q_${index + 1}`,
+                    order: index + 1,
+                    text,
+                    type,
+                    required,
+                    options
+                });
+            });
+
+            aiGeneratedSurvey.questions = updatedQuestions;
+
+            aiPreviewSaveBtn.disabled = true;
+            const prevText = aiPreviewSaveBtn.textContent;
+            aiPreviewSaveBtn.textContent = '저장 중...';
+
+            try {
+                const surveyId = `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+                const now = new Date().toISOString();
+
+                currentSurveyId = surveyId;
+                lastCreatedSurveyId = surveyId;
+
+                await API.postSurvey({
+                    survey_id: surveyId,
+                    title: aiGeneratedSurvey.title || 'AI 생성 설문',
+                    description: aiGeneratedSurvey.description || '',
+                    questions: JSON.stringify(aiGeneratedSurvey.questions || []),
+                    story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
+                    status: 'draft',
+                    created_at: now,
+                    updated_at: now
+                });
+
+                // 링크 생성 및 완료 모달 표시
+                const surveyUrl = `${window.location.origin}/survey.html?surveyId=${encodeURIComponent(surveyId)}`;
+                const shareInput = document.getElementById('shareLinkInput');
+                const qrImg = document.getElementById('qrCodeImage');
+                if (shareInput) shareInput.value = surveyUrl;
+                if (qrImg) {
+                    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(surveyUrl)}`;
+                }
+
+                closeAiPreviewModal();
+                if (completionModal) {
+                    completionModal.style.display = 'block';
+                    document.body.style.overflow = 'hidden';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('설문 저장 중 오류가 발생했습니다.');
+            } finally {
+                aiPreviewSaveBtn.disabled = false;
+                aiPreviewSaveBtn.textContent = prevText;
+            }
 function importSurveysFromJSON(json) {
     // 입력 형태: { surveys: [...] } 또는 단일 설문 객체 또는 설문 배열 허용
     let surveys = [];
