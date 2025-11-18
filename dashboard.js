@@ -237,7 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createSurveyCard(survey) {
         const responseCount = state.resultCounts.get(survey.id) || 0;
-        const completionRate = calculateCompletionRate(survey, responseCount);
 
         const card = document.createElement('div');
         card.className = 'survey-card';
@@ -275,15 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="meta-item">📅 ${formatDate(survey.createdAt)}</div>
                 <div class="meta-item">✏️ ${formatDate(survey.updatedAt || survey.createdAt)}</div>
                 <div class="meta-item">💬 응답 ${responseCount}건</div>
-            </div>
-            <div class="survey-progress">
-                <div class="progress-label">
-                    <span>응답 진행률</span>
-                    <span>${completionRate}%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${completionRate}%"></div>
-                </div>
             </div>
             <div class="survey-actions">
                 ${actionBtnHtml}

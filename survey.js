@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const button = document.createElement('button');
                 button.className = 'option-btn';
                 button.textContent = optionText;
-                button.onclick = () => handleOptionClick(optionText, question.type);
+                button.onclick = () => handleOptionClick(optionText, question.type, button, optionsContainer);
                 optionsContainer.appendChild(button);
             });
         } else if (question.type === 'text') {
@@ -127,11 +127,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add other question types as needed (e.g., 'scale')
     }
 
-    function handleOptionClick(selectedValue, type) {
+    function handleOptionClick(selectedValue, type, button, optionsContainer) {
         const question = state.survey.questions[state.currentQuestionIndex];
         let currentAnswer = state.answers.find(a => a.questionId === question.id);
 
         if (type === 'radio') {
+            // 단일 선택: 다른 버튼 선택 해제, 현재 버튼만 강조
+            if (optionsContainer) {
+                optionsContainer.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected'));
+            }
+            if (button) {
+                button.classList.add('selected');
+            }
             if (!currentAnswer) {
                 currentAnswer = { questionId: question.id, value: selectedValue };
                 state.answers.push(currentAnswer);
@@ -143,6 +150,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (type === 'checkbox') {
             // Logic for checkbox (multi-select) would be more complex
             // For now, treat as single select for simplicity
+            if (button) {
+                button.classList.toggle('selected');
+            }
             if (!currentAnswer) {
                 currentAnswer = { questionId: question.id, value: [selectedValue] };
                 state.answers.push(currentAnswer);
