@@ -23,18 +23,53 @@ export async function onRequestGet({ params, env }) {
   }
 }
 
+export async function onRequestPatch({ params, request, env }) {
+  try {
+    await ensureTables(env);
+    const surveyId = params.id;
+    let body = null;
+    try {
+      body = await request.json();
+    } catch (_) {
+      return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
+
+    const { status } = body || {};
+    if (!status) {
+      return Response.json({ error: 'Missing status' }, { status: 400 });
+    }
+
+    const updatedAt = new Date().toISOString();
+    const res = await env.surveyforge
+      .prepare(`UPDATE surveys SET status = ?, updated_at = ? WHERE survey_id = ?`)
+      .bind(status, updatedAt, surveyId)
+      .run();
+
+    if (!res || (res.success === false)) {
+      return Response.json({ error: 'Update failed' }, { status: 500 });
+    }
+
+    return Response.json({ success: true, survey_id: surveyId, status, updated_at: updatedAt });
+  } catch (e) {
+    return Response.json({ error: 'DB error', detail: String(e?.message || e) }, { status: 500 });
+  }
+}
+
 async function ensureTables(env) {
   await env.surveyforge
-    .prepare(`CREATE TABLE IF NOT EXISTS surveys (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      survey_id TEXT UNIQUE,
-      title TEXT,
-      description TEXT,
-      questions TEXT,
-      story TEXT,
-      created_at TEXT,
-      updated_at TEXT
-    )`)
+    .prepare(`
+      CREATE TABLE IF NOT EXISTS surveys (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        survey_id TEXT UNIQUE,
+        title TEXT,
+        description TEXT,
+        questions TEXT,
+        story TEXT,
+        status TEXT DEFAULT 'draft',
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `)
     .run();
   await env.surveyforge
     .prepare(`CREATE TABLE IF NOT EXISTS results (

@@ -19,6 +19,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`/api/results/${encodeURIComponent(id)}`, { method: 'GET' });
             if (!res.ok) throw new Error(`GET /api/results/${id} ${res.status}`);
             return res.json();
+        },
+        async updateSurveyStatus(id, status) {
+            const res = await fetch(`/api/surveys/${encodeURIComponent(id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            if (!res.ok) throw new Error(`PATCH /api/surveys/${id} ${res.status}`);
+            return res.json();
         }
     };
 
@@ -242,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.innerHTML = `
             <div class="survey-card-header">
                 <span class="survey-status ${statusClass}">${statusText}</span>
-                <button class="btn-icon-small" onclick="openSurveyMenu('${survey.id}')" title="메뉴">⋮</button>
+                <button class="btn-icon-small" data-menu-btn title="메뉴">⋮</button>
             </div>
             <div class="survey-title">${truncateText(survey.title, 50)}</div>
             <div class="survey-meta">
@@ -261,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div class="survey-actions">
-                <button class="btn-survey-action" onclick="editSurvey('${survey.id}')">편집</button>
+                <button class="btn-survey-action" onclick="endDeployment('${survey.id}')">배포 종료</button>
                 <button class="btn-survey-action" onclick="viewResults('${survey.id}')">결과</button>
                 <button class="btn-survey-action" onclick="shareSurvey('${survey.id}')">공유</button>
             </div>
@@ -290,6 +299,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.stopPropagation();
             });
         });
+
+        if (kebabBtn) {
+            kebabBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleDropdownMenu(survey.id, kebabBtn);
+            });
+        }
 
         return card;
     }
@@ -600,13 +616,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openSurveyMenu(surveyId) {
-        // Placeholder for context menu
-        // Simple alert menu for now
-        const choice = prompt('작업 선택:\n1. 편집\n2. 결과 보기\n3. 공유\n4. 삭제');
-        if (choice === '1') editSurvey(surveyId);
-        else if (choice === '2') viewResults(surveyId);
-        else if (choice === '3') shareSurvey(surveyId);
-        else if (choice === '4') deleteSurvey(surveyId);
+        const card = document.querySelector(`.survey-card[data-survey-id="${surveyId}"]`);
+        if (!card) return;
+        const btn = card.querySelector('[data-menu-btn]');
+        if (!btn) return;
+        toggleDropdownMenu(surveyId, btn);
     }
 
     async function deleteSurvey(surveyId) {
@@ -622,6 +636,68 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function endDeployment(surveyId) {
+        try {
+            await API.updateSurveyStatus(surveyId, 'closed');
+            const s = state.surveyMap.get(surveyId);
+            if (s) {
+                s.status = 'closed';
+                s.updatedAt = new Date().toISOString();
+            }
+            renderFolders();
+            renderSurveys();
+            updateAnalytics();
+        } catch (e) {
+            alert('배포 종료 중 오류가 발생했습니다.');
+            console.error(e);
+        }
+    }
+
+    let currentMenuEl = null;
+    function closeDropdownMenu() {
+        if (currentMenuEl && currentMenuEl.parentNode) {
+            currentMenuEl.parentNode.removeChild(currentMenuEl);
+        }
+        currentMenuEl = null;
+        document.removeEventListener('click', handleOutsideClick, true);
+    }
+
+    function handleOutsideClick(e) {
+        if (currentMenuEl && !currentMenuEl.contains(e.target)) {
+            closeDropdownMenu();
+        }
+    }
+
+    function toggleDropdownMenu(surveyId, anchorEl) {
+        if (currentMenuEl) {
+            closeDropdownMenu();
+        }
+        const menu = document.createElement('div');
+        menu.style.position = 'absolute';
+        menu.style.right = '0';
+        menu.style.top = '36px';
+        menu.style.background = '#fff';
+        menu.style.border = '1px solid #e0e0e0';
+        menu.style.borderRadius = '8px';
+        menu.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+        menu.style.padding = '6px';
+        menu.style.zIndex = '100';
+        menu.innerHTML = `
+            <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px;" onclick="editSurvey('${surveyId}')">편집</button>
+            <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px;" onclick="viewResults('${surveyId}')">결과 보기</button>
+            <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px;" onclick="shareSurvey('${surveyId}')">공유</button>
+            <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px; color:#c0392b;" onclick="deleteSurvey('${surveyId}')">삭제</button>
+        `;
+        const header = anchorEl.closest('.survey-card-header');
+        if (!header) return;
+        header.style.position = 'relative';
+        header.appendChild(menu);
+        currentMenuEl = menu;
+        setTimeout(() => {
+            document.addEventListener('click', handleOutsideClick, true);
+        }, 0);
+    }
+
     // Legacy export functions removed in DB-only mode
 
     function navigateTo(page) {
@@ -633,6 +709,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.shareSurvey = shareSurvey;
     window.editSurvey = editSurvey;
     window.viewResults = viewResults;
+    window.endDeployment = endDeployment;
+    window.deleteSurvey = deleteSurvey;
     window.filterSurveys = filterSurveys;
     window.updateSurveySort = updateSurveySort;
     window.navigateTo = navigateTo;
