@@ -196,8 +196,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!ensureSelected()) return;
       const data = getData();
       const csv = toCSV(data);
-      const blob = new Blob([csv], { type: 'application/vnd.ms-excel;charset=utf-8' });
-      download(`${safeFilename(data.title || data.surveyId)}_stats.xls`, blob);
+      // Excel에서도 깨지지 않도록 CSV 포맷 + .csv 확장자로 저장
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      download(`${safeFilename(data.title || data.surveyId)}_stats_excel.csv`, blob);
     });
   }
 
@@ -463,7 +464,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // compute and cache stats for exports
       const meta = state.surveys.find(s => s.id === surveyId) || { id: surveyId, title: '' };
       const stats = computeSurveyStats(meta, responses);
-      state.latestStats = { surveyId, title: meta.title, ...stats };
+      // latestStats에 원시 응답도 포함시켜 JSON 내보내기에서 실제 답변 내용을 볼 수 있도록 함
+      state.latestStats = { surveyId, title: meta.title, rawResponses: responses, ...stats };
 
       renderOptionBarsForAllQuestions(surveyId);
       populateQuestionSelect(surveyId);
