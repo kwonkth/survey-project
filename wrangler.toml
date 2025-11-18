@@ -1,0 +1,9 @@
+name = "survey-project"
+compatibility_date = "2024-11-18"
+
+[[d1_databases]]
+# Bind this D1 database to the Pages Functions environment as `env.surveyforge`
+binding = "surveyforge"
+database_name = "surveyforge"
+# Replace the database_id below with your actual D1 database ID for "surveyforge"
+database_id = "3d153fa3-65b1-425f-b57a-3901053a9210"
