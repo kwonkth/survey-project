@@ -244,9 +244,25 @@ document.addEventListener('DOMContentLoaded', () => {
         card.draggable = true;
         card.setAttribute('data-survey-id', survey.id);
 
-        const statusText = survey.status === 'draft' ? '작성 중' : 
-                          survey.status === 'published' ? '배포 중' : '응답 종료';
-        const statusClass = `status-${survey.status}`;
+        const normalizedStatus = survey.status || 'draft';
+        const statusTextMap = {
+            draft: '작성 중',
+            active: '배포 중',
+            published: '배포 중',
+            inactive: '응답 종료',
+            archived: '응답 종료'
+        };
+        const statusText = statusTextMap[normalizedStatus] || '작성 중';
+        const statusClass = `status-${normalizedStatus}`;
+
+        let actionBtnHtml = '';
+        if (normalizedStatus === 'draft') {
+            actionBtnHtml = `<button class="btn-survey-action" data-action="publish" data-id="${survey.id}">배포하기</button>`;
+        } else if (normalizedStatus === 'active' || normalizedStatus === 'published') {
+            actionBtnHtml = `<button class="btn-survey-action" data-action="stop" data-id="${survey.id}">배포 종료</button>`;
+        } else {
+            actionBtnHtml = `<button class="btn-survey-action" data-action="republish" data-id="${survey.id}">재배포</button>`;
+        }
 
         card.innerHTML = `
             <div class="survey-card-header">
@@ -270,9 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div class="survey-actions">
-                ${survey.status === 'published'
-                    ? `<button class="btn-survey-action" data-action="stop" data-id="${survey.id}">배포 종료</button>`
-                    : `<button class="btn-survey-action" data-action="republish" data-id="${survey.id}">재배포</button>`}
+                ${actionBtnHtml}
                 <button class="btn-survey-action" onclick="viewResults('${survey.id}')">결과</button>
                 <button class="btn-survey-action" onclick="shareSurvey('${survey.id}')">공유</button>
             </div>
@@ -574,8 +588,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const survey = state.surveyMap.get(surveyId);
         if (!survey) return;
 
-        if (survey.status !== 'published') {
-            alert('⚠️ 이 설문은 이미 종료되었거나 아직 배포되지 않아 공유할 수 없습니다.');
+        const normalizedStatus = survey.status || 'draft';
+        const shareableStatuses = ['active', 'published'];
+        if (!shareableStatuses.includes(normalizedStatus)) {
+            alert('⚠️ 이 설문은 아직 배포되지 않았거나 이미 종료되어 공유할 수 없습니다.');
             return;
         }
 
@@ -738,7 +754,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!surveyId || !action) return;
 
         try {
-            if (action === 'stop') {
+            if (action === 'publish') {
+                await API.updateSurveyStatus(surveyId, 'active');
+                const s = state.surveyMap.get(surveyId);
+                if (s) {
+                    s.status = 'active';
+                    s.updatedAt = new Date().toISOString();
+                }
+                alert('설문 배포를 시작했습니다.');
+            } else if (action === 'stop') {
                 await API.updateSurveyStatus(surveyId, 'archived');
                 const s = state.surveyMap.get(surveyId);
                 if (s) {
