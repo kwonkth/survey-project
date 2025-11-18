@@ -73,6 +73,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // ID 없으면 q_번호 형태로 보정
+        if (!question.id) {
+            question.id = `q_${state.currentQuestionIndex + 1}`;
+        }
+
         const questionContainer = document.getElementById('questionContainer');
         const optionsContainer = document.getElementById('optionsContainer');
         const progressEl = document.getElementById('progress');
@@ -129,6 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleOptionClick(selectedValue, type, button, optionsContainer) {
         const question = state.survey.questions[state.currentQuestionIndex];
+        if (!question.id) {
+            question.id = `q_${state.currentQuestionIndex + 1}`;
+        }
+        const isLast = state.currentQuestionIndex === state.survey.questions.length - 1;
         let currentAnswer = state.answers.find(a => a.questionId === question.id);
 
         if (type === 'radio') {
@@ -145,8 +154,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 currentAnswer.value = selectedValue;
             }
-            // Automatically move to next question for single choice
-            moveToNextQuestion();
+            // 마지막 문항이면 다음 문항으로 가지 않고 완료 화면으로 이동
+            if (isLast) {
+                showCompletionScreen();
+            } else {
+                // Automatically move to next question for single choice
+                moveToNextQuestion();
+            }
         } else if (type === 'checkbox') {
             // Logic for checkbox (multi-select) would be more complex
             // For now, treat as single select for simplicity
@@ -184,8 +198,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const question = state.survey.questions[state.currentQuestionIndex];
+        if (!question.id) {
+            question.id = `q_${state.currentQuestionIndex + 1}`;
+        }
         state.answers.push({ questionId: question.id, value: value.trim() });
-        moveToNextQuestion();
+        const isLast = state.currentQuestionIndex === state.survey.questions.length - 1;
+        if (isLast) {
+            showCompletionScreen();
+        } else {
+            moveToNextQuestion();
+        }
     }
 
     function moveToNextQuestion() {
