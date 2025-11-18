@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     description: row.description || '',
                     createdAt: row.created_at || row.createdAt || null,
                     updatedAt: row.updated_at || row.updatedAt || null,
-                    status: row.status || 'active',
+                    status: row.status ?? 'draft',
                     folderId: row.folder_id || null,
                     questions: questions || []
                 };
