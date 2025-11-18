@@ -276,6 +276,100 @@ body {
     animation: modalFadeIn 0.3s ease-out;
 }
 
+/* AI Generation Modal */
+.ai-modal {
+    padding: 2rem 2.5rem;
+}
+
+.ai-modal h2 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    color: var(--primary-color);
+}
+
+.ai-modal-desc {
+    margin: 0 0 1.5rem 0;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.ai-modal-body {
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.ai-actions {
+    margin-top: 1.5rem;
+}
+
+/* AI Preview & Edit Modal */
+.ai-preview-modal {
+    padding: 2rem 2.5rem;
+}
+
+.ai-preview-modal h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.ai-preview-meta {
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    background: #f8f9ff;
+    border-radius: 8px;
+    border: 1px solid #e0e0ff;
+}
+
+.ai-preview-meta h3 {
+    margin: 0 0 0.25rem 0;
+    color: var(--primary-dark);
+}
+
+.ai-preview-meta p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.ai-preview-questions {
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.ai-preview-question {
+    background-color: #f9f9ff;
+    border: 1px solid #e0e0ff;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.ai-preview-question .form-group {
+    margin-bottom: 0.75rem;
+}
+
+.ai-preview-question .form-group label {
+    font-size: 0.9rem;
+}
+
+.ai-preview-question .ai-q-options {
+    font-size: 0.9rem;
+}
+
+.ai-preview-question .ai-q-required {
+    width: 16px;
+    height: 16px;
+}
+
+.ai-preview-actions {
+    margin-top: 1.5rem;
+}
+
 @keyframes modalFadeIn {
     from {
         opacity: 0;
