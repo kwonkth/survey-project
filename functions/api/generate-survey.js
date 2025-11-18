@@ -13,10 +13,17 @@ export async function onRequestPost({ request, env }) {
     }
 
     const topic = String(payload?.topic || '').trim();
-    const questionCount = Math.max(1, Math.min(10, Number(payload?.questionCount || 5)));
+    const questionCountRaw = Number(payload?.questionCount || 5);
+    const questionCount = Number.isFinite(questionCountRaw)
+      ? Math.max(1, Math.min(50, questionCountRaw))
+      : 5;
     const style = String(payload?.style || '');
     const style_id = String(payload?.style_id || '').trim();
     const includeNameQuestion = Boolean(payload?.includeNameQuestion);
+    const questionTypeMode = String(payload?.questionTypeMode || 'auto');
+    const mandatoryQuestions = Array.isArray(payload?.mandatoryQuestions)
+      ? payload.mandatoryQuestions.map(q => String(q || '').trim()).filter(Boolean)
+      : [];
 
     if (!topic) {
       return Response.json({ error: 'topic is required' }, { status: 400 });
@@ -35,7 +42,15 @@ export async function onRequestPost({ request, env }) {
     }
 
     const SYSTEM_PROMPT = buildSystemPrompt();
-    const userContent = buildUserPrompt({ topic, questionCount, style, styleTemplate, includeNameQuestion });
+    const userContent = buildUserPrompt({
+      topic,
+      questionCount,
+      style,
+      styleTemplate,
+      includeNameQuestion,
+      questionTypeMode,
+      mandatoryQuestions
+    });
 
     const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -86,19 +101,35 @@ export async function onRequestPost({ request, env }) {
 
 function buildSystemPrompt() {
   return [
-    '당신은 \'퀘스트 기반 설문 생성 전문 LLM\'입니다.',
-    '사용자의 주제·스타일·문항 수를 기반으로, 일관성 있는 JSON 설문을 생성합니다.',
+    "당신은 '스토리 기반 설문조사 생성 전문 LLM'입니다.",
+    '출력은 반드시 JSON 하나만 반환해야 하며, 설명 문장은 출력하지 않습니다.',
     '',
-    '출력 규칙:',
-    '- 반드시 JSON만 반환',
-    '- 질문 id: q_1, q_2... 형식',
-    '- options는 문자열 배열',
-    '- 스토리 분위기 정보는 story_context에 정리',
-    '- 한국어 출력'
+    '출력 형식 규칙 (절대 어기지 말 것):',
+    '1) 전체 출력은 JSON 객체 하나만 반환한다.',
+    '2) keys: title, description, questions, story_context',
+    '3) questions는 배열이며 각 항목은 id, order, text, type, required, options 필드를 가진다.',
+    '   - id: "q_1", "q_2" 형식',
+    '   - order: 1부터 시작하는 숫자',
+    '   - text: 질문 문장 (한국어)',
+    '   - type: "radio" | "checkbox" | "text"',
+    '   - required: true | false',
+    '   - options: type이 radio/checkbox일 때 보기 문자열 배열, text일 때 []',
+    '4) story_context는 mood, tone, keywords 배열을 포함한다.',
+    '5) JSON 밖에 다른 문장, 설명, 코드블록 기호 등을 절대 출력하지 않는다.',
+    '',
+    'type 결정 규칙:',
+    '- "2지선다/3지선다/4지선다" 등 단일 선택: type = "radio"',
+    '- "복수 선택" 또는 "중복 가능": type = "checkbox"',
+    '- 그 밖의 서술형: type = "text"',
+    '',
+    'options 규칙:',
+    '- radio/checkbox일 때만 보기 문자열 목록을 넣고, text일 때 options는 빈 배열',
+    '',
+    '절대 JSON 형식 외의 설명을 출력하지 말 것.'
   ].join('\n');
 }
 
-function buildUserPrompt({ topic, questionCount, style, styleTemplate, includeNameQuestion }) {
+function buildUserPrompt({ topic, questionCount, style, styleTemplate, includeNameQuestion, questionTypeMode, mandatoryQuestions }) {
   const styleLines = [];
   if (style && style.trim()) styleLines.push(`선호 스타일: ${style}`);
   if (styleTemplate && typeof styleTemplate === 'object') {
@@ -106,22 +137,27 @@ function buildUserPrompt({ topic, questionCount, style, styleTemplate, includeNa
     if (styleTemplate.tone) styleLines.push(`tone: ${styleTemplate.tone}`);
     if (Array.isArray(styleTemplate.keywords) && styleTemplate.keywords.length) styleLines.push(`keywords: ${styleTemplate.keywords.join(', ')}`);
   }
+
+  const mandatoryBlock = mandatoryQuestions.length
+    ? ['필수 포함 질문 목록:', ...mandatoryQuestions.map((q, idx) => `${idx + 1}. ${q}`)].join('\n')
+    : '필수 포함 질문 없음';
+
   return [
     `주제: ${topic}`,
     `문항 수: ${questionCount}`,
-    styleLines.length ? `스타일 템플릿:\n${styleLines.join('\n')}` : '스타일 템플릿: 없음',
-    `필수 문항 포함: ${includeNameQuestion}`,
+    `질문 유형 모드: ${questionTypeMode}`,
+    `필수 이름 질문 포함: ${includeNameQuestion}`,
+    styleLines.length ? `선택한 분위기 템플릿:\n${styleLines.join('\n')}` : '선택한 분위기 템플릿: 없음',
+    mandatoryBlock,
     '',
-    '해당 정보를 기반으로 일관성 있는 설문조사를 생성해 주세요.',
-    '응답은 JSON으로만 주세요. 예시:',
-    '{',
-    '  "title": "...",',
-    '  "description": "...",',
-    '  "questions": [',
-    '    { "id": "q_1", "order": 1, "text": "...", "type": "radio", "required": true, "options": ["A","B"] }',
-    '  ],',
-    '  "story_context": { "mood": "...", "tone": "...", "keywords": ["..."] }',
-    '}'
+    '질문 유형 규칙:',
+    '- mode = auto  : 문항 의미에 맞게 type을 자동 선택',
+    '- mode = fixed_two  : 모든 객관식 문항은 2지선다 (radio)로 생성',
+    '- mode = fixed_four : 모든 객관식 문항은 4지선다 (radio)로 생성',
+    '- mode = mixed : 객관식과 서술형을 균형 있게 섞어 구성',
+    '',
+    '필수 포함 질문과 입력 정보를 모두 반영하여 일관된 JSON 설문을 생성하세요.',
+    '응답은 반드시 JSON 객체 하나만 출력해야 하며, 다른 문장은 절대 포함하지 마세요.'
   ].join('\n');
 }
 
