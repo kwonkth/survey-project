@@ -231,7 +231,7 @@ function normalizeSurvey(modelOut, { includeNameQuestion }) {
         questions[0] = { ...questions[0], id: 'q_name', type: 'text', required: false, options: [] };
       }
     } else {
-      const nameQ = { id: 'q_name', order: 1, text: '모험가여, 당신의 이름을 알려주세요.', type: 'text', required: false, options: [] };
+      const nameQ = { id: 'q_name', order: 1, text: '당신의 이름을 알려주세요.', type: 'text', required: false, options: [] };
       questions = [nameQ, ...questions];
     }
   }
