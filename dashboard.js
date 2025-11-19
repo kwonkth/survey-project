@@ -567,10 +567,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = `analytics.html?surveyId=${surveyId}`;
     }
 
-    // Build a short share URL: /s/:id -> redirected to /survey.html?surveyId=:id by Netlify
+    // Build a direct share URL to the survey page
     function createShareUrl(survey) {
         const surveyId = survey.id;
-        const url = `${window.location.origin}/s/${surveyId}`;
+        const url = `${window.location.origin}/survey.html?surveyId=${encodeURIComponent(surveyId)}`;
         return url;
     }
 
