@@ -579,11 +579,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!survey) return;
 
         const normalizedStatus = survey.status || 'draft';
-        const shareableStatuses = ['active', 'published'];
-        if (!shareableStatuses.includes(normalizedStatus)) {
-            alert('⚠️ 이 설문은 아직 배포되지 않았거나 이미 종료되어 공유할 수 없습니다.');
-            return;
-        }
+        // 현재는 DB의 status가 항상 'draft'에서 제대로 갱신되지 않을 수 있으므로
+        // 상태와 무관하게 공유를 허용한다. (향후 /api/surveys/:id PATCH 구현 후 다시 tighten 가능)
 
         const shareUrl = createShareUrl(survey);
 
