@@ -214,6 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
             let questionTypeMode = 'auto';
             if (questionTypeLabel.includes('2지선다')) questionTypeMode = 'fixed_two';
             else if (questionTypeLabel.includes('4지선다')) questionTypeMode = 'fixed_four';
+            else if (questionTypeLabel.includes('5지선다')) questionTypeMode = 'fixed_five';
             else if (questionTypeLabel.includes('혼합')) questionTypeMode = 'mixed';
 
             const styleLabel = aiStyleSelect?.selectedOptions?.[0]?.textContent?.trim() || '';

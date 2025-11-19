@@ -326,26 +326,17 @@ document.addEventListener('DOMContentLoaded', () => {
     return { labels, counts: options.map(o => counts.get(String(o.value)) || 0) };
   }
 
-  // 색상 팔레트: 도넛/막대 그래프에서 동일 label이면 동일 색상을 사용
+  // 색상 팔레트: 한 질문 안에서 선택지 1~5번까지만 색으로 구분 (이후는 순환)
   const OPTION_COLOR_PALETTE = [
-    '#4a6baf', '#f5b041', '#e74c3c', '#27ae60',
-    '#9b59b6', '#16a085', '#e67e22', '#2c3e50'
+    '#4a6baf', // 1번 선택지
+    '#f5b041', // 2번 선택지
+    '#e74c3c', // 3번 선택지
+    '#27ae60', // 4번 선택지
+    '#9b59b6'  // 5번 선택지
   ];
-  const optionColorMap = new Map();
 
-  function getColorForLabel(label) {
-    const key = String(label || '');
-    if (!optionColorMap.has(key)) {
-      const idx = optionColorMap.size % OPTION_COLOR_PALETTE.length;
-      optionColorMap.set(key, OPTION_COLOR_PALETTE[idx]);
-    }
-    return optionColorMap.get(key);
-  }
-
-  function getBorderColorForLabel(label) {
-    const base = getColorForLabel(label);
-    // 살짝 어둡게
-    return base;
+  function getIndexedColor(index) {
+    return OPTION_COLOR_PALETTE[index % OPTION_COLOR_PALETTE.length];
   }
 
   function renderOptionBarsForAllQuestions(surveyId){
@@ -379,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const datasets = optionLabels.map(label => {
+    const datasets = optionLabels.map((label, idx) => {
       const data = questions.map(q => {
         const found = (q.options || []).find(o => String(o.label) === String(label));
         return found ? found.percent : 0;
@@ -387,8 +378,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return {
         label,
         data,
-        backgroundColor: getColorForLabel(label),
-        borderColor: getBorderColorForLabel(label),
+        backgroundColor: getIndexedColor(idx),
+        borderColor: getIndexedColor(idx),
         borderWidth: 1,
         maxBarThickness: 18
       };
@@ -438,8 +429,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (optionEmpty) optionEmpty.style.display = 'none';
     if (state.doughnutChart) state.doughnutChart.destroy();
-    const colors = labels.map(label => getColorForLabel(label));
-    const borders = labels.map(label => getBorderColorForLabel(label));
+    const colors = labels.map((_, idx) => getIndexedColor(idx));
+    const borders = colors;
     state.doughnutChart = new Chart(ctx, {
       type: 'doughnut',
       data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderColor: borders }] },
