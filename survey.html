@@ -223,9 +223,10 @@
 
             #optionsContainer {
                 gap: 12px;
-                /* 모바일에서 보기(질문 선택지)가 많을 때, 아래가 잘리지 않고
-                   위/아래로 슬라이드(스크롤)해서 볼 수 있도록 별도 스크롤 영역으로 지정 */
-                max-height: 60vh;
+                /* 모바일에서 선택지가 5개를 넘어가면, 
+                   대략 5개 정도까지만 한 화면에 보이고 
+                   나머지는 세로 스크롤로만 보이도록 높이를 제한 */
+                max-height: 320px; /* 버튼 높이 기준 약 5개 분량 */
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
             }
