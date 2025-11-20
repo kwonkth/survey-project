@@ -12,7 +12,7 @@
 <body class="analytics-page">
   <div class="app-container">
     <header class="app-header">
-      <div class="logo">퀘스트 설문 마법사</div>
+      <div class="logo" onclick="navigateTo('index.html')">퀘스트 설문 마법사</div>
       <nav>
         <button class="nav-btn" onclick="navigateTo('index.html')">대시보드</button>
         <button class="nav-btn" onclick="navigateTo('dashboard.html')">설문 관리</button>
@@ -41,13 +41,14 @@
         </div>
 
         <div class="dashboard-card" id="selectedDropoutContainer">
-          <h3>문항별 선택지 분포 (막대그래프)</h3>
+          <h3>전체 문항 비교 – 응답 수 요약 (가로 막대)</h3>
           <div style="height:300px"><canvas id="chart1"></canvas></div>
           <div class="empty-state" id="dropoutEmpty" style="display:none; margin-top:0.5rem;">선택한 설문의 문항이 없습니다.</div>
         </div>
 
         <div class="dashboard-card" id="overallDoughnutContainer">
-          <h3>선택한 문항 – 선택지 분포 (이름 문항 제외)</h3>
+          <h3>선택한 문항 – 선택지 분포 (도넛)</h3>
+          <p id="selectedQuestionTitle" style="margin:0 0 0.5rem 0; font-weight:600; color:#2c3e50;"></p>
           <div style="height:300px"><canvas id="chart2"></canvas></div>
           <div class="empty-state" id="optionEmpty" style="display:none; margin-top:0.5rem;">선택지 기반 문항을 선택하세요.</div>
         </div>

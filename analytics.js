@@ -353,37 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const questions = stats.questions;
     const labels = questions.map(q => `Q${q.number}`);
-
-    // 모든 객관식 문항의 옵션 라벨 집합
-    const optionLabelSet = new Set();
-    questions.forEach(q => {
-      (q.options || []).forEach(o => {
-        if (o && typeof o.label !== 'undefined') optionLabelSet.add(String(o.label));
-      });
-    });
-
-    const optionLabels = Array.from(optionLabelSet);
-
-    if (!optionLabels.length) {
-      if (state.selectedDropoutChart) { state.selectedDropoutChart.destroy(); state.selectedDropoutChart = null; }
-      if (containerEmpty) containerEmpty.style.display = 'block';
-      return;
-    }
-
-    const datasets = optionLabels.map((label, idx) => {
-      const data = questions.map(q => {
-        const found = (q.options || []).find(o => String(o.label) === String(label));
-        return found ? found.percent : 0;
-      });
-      return {
-        label,
-        data,
-        backgroundColor: getIndexedColor(idx),
-        borderColor: getIndexedColor(idx),
-        borderWidth: 1,
-        maxBarThickness: 18
-      };
-    });
+    const data = questions.map(q => q.respondedCount || 0);
 
     if (state.selectedDropoutChart) {
       state.selectedDropoutChart.destroy();
@@ -392,22 +362,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     state.selectedDropoutChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels, datasets },
+      data: {
+        labels,
+        datasets: [{
+          label: '응답 수',
+          data,
+          backgroundColor: '#4a6baf',
+          borderColor: '#4a6baf',
+          borderWidth: 1,
+          maxBarThickness: 18
+        }]
+      },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        indexAxis: 'y',
         scales: {
-          y: { beginAtZero: true, max: 100, ticks: { callback: v => `${v}%` } }
+          x: {
+            beginAtZero: true,
+            ticks: { precision: 0 }
+          }
         },
         plugins: {
-          legend: { position: 'bottom' },
+          legend: { display: false },
           datalabels: {
             display: true,
             color: '#333',
             anchor: 'end',
-            align: 'top',
+            align: 'right',
             font: { weight: 'bold', size: 10 },
-            formatter: (value) => value ? `${value}%` : ''
+            formatter: (value) => value ? String(value) : ''
           }
         }
       },
@@ -431,6 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.doughnutChart) state.doughnutChart.destroy();
     const colors = labels.map((_, idx) => getIndexedColor(idx));
     const borders = colors;
+    setSelectedQuestionTitle(surveyId, questionId);
     state.doughnutChart = new Chart(ctx, {
       type: 'doughnut',
       data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderColor: borders }] },
@@ -440,6 +425,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setOptionEmpty(show){ const el = document.getElementById('optionEmpty'); if (el) el.style.display = show ? 'block' : 'none'; }
   function setDropoutEmpty(show){ const el = document.getElementById('dropoutEmpty'); if (el) el.style.display = show ? 'block' : 'none'; }
+
+  function setSelectedQuestionTitle(surveyId, questionId){
+    const el = document.getElementById('selectedQuestionTitle');
+    if (!el) return;
+    const stats = state.latestStats;
+    if (!stats || stats.surveyId !== surveyId || !Array.isArray(stats.questions)) {
+      el.textContent = '';
+      return;
+    }
+    const q = stats.questions.find(x => String(x.id) === String(questionId));
+    if (!q) {
+      el.textContent = '';
+      return;
+    }
+    el.textContent = `Q${q.number}. ${q.text || ''}`;
+  }
 
   function onSurveySelected(surveyId){
     // Reset charts
