@@ -1361,36 +1361,91 @@ function calcCompletionSummaryForDashboard(questions, responses) {
     return { completionRate, completedCount };
 }
 
-function renderLatestSurveyDonutCard(latestMeta) {
+function toOptionArrayForDashboard(options) {
+    if (!Array.isArray(options)) return [];
+    return options.map((o, idx) => {
+        if (o && typeof o === 'object') {
+            const label = o.label ?? o.text ?? String(o.value ?? o.id ?? idx + 1);
+            const value = o.value ?? o.label ?? o.text ?? label;
+            return { label: String(label), value: String(value) };
+        }
+        return { label: String(o), value: String(o) };
+    });
+}
+
+function pickFirstEligibleQuestion(questions) {
+    if (!Array.isArray(questions)) return null;
+    const isNameLike = (q) => {
+        const id = String(q.id || '').toLowerCase();
+        const t = String(q.text || '');
+        return id === 'q_name' || /이름/.test(t);
+    };
+    const hasOptions = (q) => Array.isArray(q.options) && q.options.length > 0;
+
+    let q = questions.find(q => hasOptions(q) && !isNameLike(q));
+    if (!q) {
+        q = questions.find(hasOptions);
+    }
+    return q || null;
+}
+
+function renderLatestSurveyDonutCard(latestMeta, responses) {
     const titleEl = document.getElementById('latestSurveyTitle');
-    const completionEl = document.getElementById('latestSurveyCompletion');
+    const questionEl = document.getElementById('latestSurveyQuestion');
     const countsEl = document.getElementById('latestSurveyCounts');
-    const updatedEl = document.getElementById('latestSurveyUpdated');
     const canvas = document.getElementById('latestSurveyDonut');
 
     if (!canvas) return;
 
-    const hasData = latestMeta && typeof latestMeta.completionRate === 'number';
-    const rate = hasData ? latestMeta.completionRate : 0;
-    const completed = hasData ? latestMeta.completedCount : 0;
-    const total = hasData ? latestMeta.responsesCount : 0;
-    const title = latestMeta?.title || '-';
-    const updatedAt = latestMeta?.updatedAt || null;
-
-    if (titleEl) titleEl.textContent = hasData ? `최신 설문: "${title}"` : '최근 설문 데이터가 없습니다.';
-    if (completionEl) completionEl.textContent = `완료율: ${rate}%`;
-    if (countsEl) countsEl.textContent = `응답수: ${completed} / ${total}`;
-    if (updatedEl) {
-        if (updatedAt) {
-            const d = new Date(updatedAt);
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            updatedEl.textContent = `최근 업데이트: ${y}-${m}-${day}`;
-        } else {
-            updatedEl.textContent = '최근 업데이트: -';
+    if (!latestMeta || !Array.isArray(latestMeta.questions) || !responses || !responses.length) {
+        if (titleEl) titleEl.textContent = '설문 제목: -';
+        if (questionEl) questionEl.textContent = '1번 문항: -';
+        if (countsEl) countsEl.textContent = '응답 총합: 0건';
+        if (latestSurveyDonutChart) {
+            latestSurveyDonutChart.destroy();
+            latestSurveyDonutChart = null;
         }
+        return;
     }
+
+    const questions = latestMeta.questions;
+    const q = pickFirstEligibleQuestion(questions);
+
+    if (!q) {
+        if (titleEl) titleEl.textContent = `설문 제목: ${latestMeta.title || '-'}`;
+        if (questionEl) questionEl.textContent = '1번 문항: (객관식 문항이 없습니다)';
+        if (countsEl) countsEl.textContent = '응답 총합: 0건';
+        if (latestSurveyDonutChart) {
+            latestSurveyDonutChart.destroy();
+            latestSurveyDonutChart = null;
+        }
+        return;
+    }
+
+    const options = toOptionArrayForDashboard(q.options);
+    const countsMap = new Map(options.map(o => [String(o.value), 0]));
+
+    responses.forEach(r => {
+        (r.answers || []).forEach(a => {
+            if (a.questionId == q.id) {
+                const vs = Array.isArray(a.value) ? a.value : [a.value];
+                vs.forEach(v => {
+                    const key = String(v);
+                    const match = options.find(o => String(o.value) === key || String(o.label) === key);
+                    const k = match ? String(match.value) : key;
+                    countsMap.set(k, (countsMap.get(k) || 0) + 1);
+                });
+            }
+        });
+    });
+
+    const labels = options.map(o => o.label);
+    const data = options.map(o => countsMap.get(String(o.value)) || 0);
+    const total = data.reduce((sum, v) => sum + v, 0);
+
+    if (titleEl) titleEl.textContent = `설문 제목: ${latestMeta.title || '-'}`;
+    if (questionEl) questionEl.textContent = `1번 문항: ${q.text || '-'}`;
+    if (countsEl) countsEl.textContent = `응답 총합: ${total}건`;
 
     if (typeof Chart === 'undefined') return;
 
@@ -1400,39 +1455,39 @@ function renderLatestSurveyDonutCard(latestMeta) {
     }
 
     const ctx = canvas.getContext('2d');
-    const data = [rate, Math.max(0, 100 - rate)];
 
     latestSurveyDonutChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['완료', '미완료'],
+            labels,
             datasets: [{
                 data,
-                backgroundColor: ['#6C5CE7', '#dfe6e9'],
+                backgroundColor: labels.map((_, idx) => {
+                    const palette = ['#6C5CE7', '#FFAA00', '#FF7675', '#55EFC4', '#0984E3'];
+                    return palette[idx % palette.length];
+                }),
                 borderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '70%',
+            cutout: '60%',
             plugins: {
-                legend: { display: false },
+                legend: { display: true, position: 'bottom' },
                 tooltip: {
                     callbacks: {
                         label: (ctx) => {
                             const label = ctx.label || '';
                             const v = ctx.parsed || 0;
-                            return `${label}: ${v}%`;
+                            if (!total) return `${label}: ${v}명`;
+                            const pct = Math.round((v / total) * 100);
+                            return `${label}: ${v}명 (${pct}%)`;
                         }
                     }
-                },
-                latestDonutCenter: {
-                    text: `${rate}%`
                 }
             }
-        },
-        plugins: [latestDonutCenterPlugin]
+        }
     });
 }
 
@@ -1478,7 +1533,6 @@ async function renderMainDashboard() {
             }
         }
 
-        // 설문 메타 정보 정규화
         const metaSurveys = (surveys || []).map(row => {
             let questions = row.questions;
             if (typeof questions === 'string') {
@@ -1495,9 +1549,12 @@ async function renderMainDashboard() {
 
         let totalResponses = 0;
         const enriched = [];
+        const responsesById = {};
 
         for (const s of metaSurveys) {
             const responses = await getNormalizedResultsForDashboard(s.id);
+            responsesById[s.id] = responses;
+
             const { completionRate, completedCount } = calcCompletionSummaryForDashboard(s.questions, responses);
             const info = {
                 ...s,
@@ -1517,29 +1574,37 @@ async function renderMainDashboard() {
         const latest = enriched
             .slice()
             .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))[0] || null;
+        const latestResponses = latest ? (responsesById[latest.id] || []) : [];
 
         if (stats) {
             stats.innerHTML = `
                 <h3> 설문 통계 </h3>
                 <div class="dashboard-stats-grid">
                     <div class="dashboard-stats-left">
-                        <div class="stat-item"><span class="stat-value">${metaSurveys.length}</span><span class="stat-label">설문 개수</span></div>
-                        <div class="stat-item"><span class="stat-value">${totalResponses}</span><span class="stat-label">총 응답</span></div>
-                        <div class="stat-item"><span class="stat-value">${avgCompletion}%</span><span class="stat-label">평균 완료율</span></div>
+                        <div class="stat-item">
+                            <span class="stat-value">${metaSurveys.length}</span>
+                            <span class="stat-label">설문 개수</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${totalResponses}</span>
+                            <span class="stat-label">총 응답</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${avgCompletion}%</span>
+                            <span class="stat-label">평균 완료율</span>
+                        </div>
                     </div>
                     <div class="latest-survey-card">
                         <div class="latest-survey-header">
-                            <div class="latest-survey-title">최근 설문 완료율</div>
-                            <div class="latest-survey-main-number">${latest ? latest.completionRate : 0}%</div>
+                            <div class="latest-survey-title">최근 설문</div>
                         </div>
                         <div class="latest-survey-donut-wrap">
                             <canvas id="latestSurveyDonut"></canvas>
                         </div>
                         <div class="latest-survey-meta">
-                            <div id="latestSurveyTitle">-</div>
-                            <div id="latestSurveyCompletion">완료율: 0%</div>
-                            <div id="latestSurveyCounts">응답수: 0 / 0</div>
-                            <div id="latestSurveyUpdated">최근 업데이트: -</div>
+                            <div id="latestSurveyTitle">설문 제목: -</div>
+                            <div id="latestSurveyQuestion">1번 문항: -</div>
+                            <div id="latestSurveyCounts">응답 총합: 0건</div>
                         </div>
                     </div>
                 </div>
@@ -1548,7 +1613,7 @@ async function renderMainDashboard() {
             stats.onclick = () => { window.location.href = 'analytics.html'; };
         }
 
-        renderLatestSurveyDonutCard(latest);
+        renderLatestSurveyDonutCard(latest, latestResponses);
     } catch (e) {
         if (inProgress) inProgress.innerHTML = '<h3>작업 중인 설문</h3><div class="empty-quest-item">API 오류로 목록을 불러오지 못했습니다.</div>';
     }
