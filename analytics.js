@@ -751,17 +751,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       state.dateFilter = { from, to };
-      const labelEl = document.getElementById('kpiDateRangeLabel');
-      if (labelEl) {
-        const text = select.options[select.selectedIndex]?.text || '';
-        labelEl.textContent = text;
-      }
       rebuildStatsForCurrentSurvey();
     };
 
     select.addEventListener('change', apply);
-    // 초기값: 최근 7일
-    if (!select.value) select.value = '7d';
+    // 초기값: 현재 선택된 값(기본 전체 기간)을 기준으로 필터 적용
     apply();
   }
 

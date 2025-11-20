@@ -82,6 +82,11 @@
             border-left-color: #4a6baf;
         }
 
+        .folder-item.drag-over-folder {
+            background: #e0ecff;
+            border-left-color: #4a6baf;
+        }
+
         .folder-icon {
             font-size: 1.5rem;
             margin-right: 1rem;
@@ -262,6 +267,18 @@
             background: #f8f9fa;
             border-color: #4a6baf;
             color: #4a6baf;
+        }
+
+        .btn-survey-action.btn-survey-delete {
+            border-color: #f5c6cb;
+            color: #c0392b;
+            background: #fff5f5;
+        }
+
+        .btn-survey-action.btn-survey-delete:hover {
+            background: #f8d7da;
+            border-color: #c0392b;
+            color: #c0392b;
         }
 
         .response-analysis-section {
@@ -669,6 +686,26 @@
                 <div class="empty-state-icon">📈</div>
                 <div class="empty-state-text">응답 데이터가 없습니다</div>
                 <div class="empty-state-hint">설문에 응답을 추가하면 분석 결과가 표시됩니다</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Move Folder Modal -->
+    <div class="modal-overlay" id="moveFolderModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>폴더로 이동</h3>
+            </div>
+            <div class="modal-body">
+                <p id="moveFolderInfo" style="margin-bottom:1rem; color:#2c3e50; font-size:0.9rem;"></p>
+                <div class="form-group">
+                    <label for="moveFolderSelect">폴더 선택</label>
+                    <select id="moveFolderSelect" style="width:100%; padding:0.7rem; border:1px solid #ddd; border-radius:6px; font-size:0.95rem;"></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal btn-modal-secondary" onclick="closeMoveFolderModal()">취소</button>
+                <button class="btn-modal btn-modal-primary" onclick="applyMoveFolder()">이동</button>
             </div>
         </div>
     </div>

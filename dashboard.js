@@ -3,6 +3,71 @@ document.addEventListener('DOMContentLoaded', () => {
         Chart.register(ChartDataLabels);
     }
 
+    let currentMoveSurveyId = null;
+
+    function openMoveFolderModal(surveyId) {
+        currentMoveSurveyId = surveyId;
+        const modal = document.getElementById('moveFolderModal');
+        const select = document.getElementById('moveFolderSelect');
+        const info = document.getElementById('moveFolderInfo');
+        if (!modal || !select || !info) return;
+
+        // Populate folder options with custom folders only
+        select.innerHTML = '';
+        const customFolders = state.folders.filter(f => 
+            f.id !== 'all' && f.id !== 'draft' && f.id !== 'active' && f.id !== 'closed'
+        );
+
+        if (customFolders.length === 0) {
+            info.textContent = '이동할 수 있는 폴더가 없습니다. 먼저 새 폴더를 만들어 주세요.';
+            select.style.display = 'none';
+        } else {
+            info.textContent = '이 설문을 이동할 폴더를 선택하세요.';
+            select.style.display = 'block';
+            customFolders.forEach(folder => {
+                const opt = document.createElement('option');
+                opt.value = folder.id;
+                opt.textContent = folder.name;
+                select.appendChild(opt);
+            });
+
+            const survey = state.surveyMap.get(surveyId);
+            if (survey && survey.folderId) {
+                select.value = survey.folderId;
+            }
+        }
+
+        modal.classList.add('active');
+    }
+
+    function closeMoveFolderModal() {
+        const modal = document.getElementById('moveFolderModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+        currentMoveSurveyId = null;
+    }
+
+    function applyMoveFolder() {
+        if (!currentMoveSurveyId) {
+            closeMoveFolderModal();
+            return;
+        }
+        const select = document.getElementById('moveFolderSelect');
+        if (!select || select.style.display === 'none') {
+            closeMoveFolderModal();
+            return;
+        }
+        const folderId = select.value;
+        const survey = state.surveyMap.get(currentMoveSurveyId);
+        if (survey) {
+            survey.folderId = folderId || null;
+        }
+        renderFolders();
+        renderSurveys();
+        closeMoveFolderModal();
+    }
+
     // No persistence; folders are in-memory defaults only
     const API = {
         async getSurveys() {
@@ -183,12 +248,40 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Allow dropping survey cards onto custom folders to move them
+        if (folder.id !== 'all' && folder.id !== 'draft' && folder.id !== 'active' && folder.id !== 'closed') {
+            el.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                el.classList.add('drag-over-folder');
+            });
+            el.addEventListener('dragleave', () => {
+                el.classList.remove('drag-over-folder');
+            });
+            el.addEventListener('drop', (e) => {
+                e.preventDefault();
+                el.classList.remove('drag-over-folder');
+                const surveyId = e.dataTransfer.getData('surveyId');
+                if (!surveyId) return;
+                const survey = state.surveyMap.get(surveyId);
+                if (!survey) return;
+                survey.folderId = folder.id;
+                renderFolders();
+                renderSurveys();
+            });
+        }
+
         return el;
     }
 
     function countSurveysByStatus(status) {
         if (status === 'all') return state.surveys.length;
-        return state.surveys.filter(s => (s.status || 'draft') === status).length;
+        return state.surveys.filter(s => {
+            const st = s.status || 'draft';
+            if (status === 'draft') return st === 'draft';
+            if (status === 'active') return st === 'active' || st === 'published';
+            if (status === 'closed') return st === 'inactive' || st === 'archived';
+            return false;
+        }).length;
     }
 
     function countSurveysByFolder(folderId) {
@@ -211,7 +304,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // Apply folder filter
         if (state.selectedFolder !== 'all') {
             if (['draft', 'active', 'closed'].includes(state.selectedFolder)) {
-                filtered = filtered.filter(s => s.status === state.selectedFolder);
+                filtered = filtered.filter(s => {
+                    const st = s.status || 'draft';
+                    if (state.selectedFolder === 'draft') {
+                        return st === 'draft';
+                    }
+                    if (state.selectedFolder === 'active') {
+                        return st === 'active' || st === 'published';
+                    }
+                    if (state.selectedFolder === 'closed') {
+                        return st === 'inactive' || st === 'archived';
+                    }
+                    return false;
+                });
             } else {
                 filtered = filtered.filter(s => s.folderId === state.selectedFolder);
             }
@@ -243,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.draggable = true;
         card.setAttribute('data-survey-id', survey.id);
 
-        const normalizedStatus = survey.status || 'draft';
+        const rawStatus = survey.status || 'draft';
         const statusTextMap = {
             draft: '작성 중',
             active: '배포 중',
@@ -251,17 +356,8 @@ document.addEventListener('DOMContentLoaded', () => {
             inactive: '응답 종료',
             archived: '응답 종료'
         };
-        const statusText = statusTextMap[normalizedStatus] || '작성 중';
-        const statusClass = `status-${normalizedStatus}`;
-
-        let actionBtnHtml = '';
-        if (normalizedStatus === 'draft') {
-            actionBtnHtml = `<button class="btn-survey-action" data-action="publish" data-id="${survey.id}">배포하기</button>`;
-        } else if (normalizedStatus === 'active' || normalizedStatus === 'published') {
-            actionBtnHtml = `<button class="btn-survey-action" data-action="stop" data-id="${survey.id}">배포 종료</button>`;
-        } else {
-            actionBtnHtml = `<button class="btn-survey-action" data-action="republish" data-id="${survey.id}">재배포</button>`;
-        }
+        const statusText = statusTextMap[rawStatus] || '작성 중';
+        const statusClass = `status-${rawStatus}`;
 
         card.innerHTML = `
             <div class="survey-card-header">
@@ -276,9 +372,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="meta-item">💬 응답 ${responseCount}건</div>
             </div>
             <div class="survey-actions">
-                ${actionBtnHtml}
-                <button class="btn-survey-action" onclick="viewResults('${survey.id}')">결과</button>
-                <button class="btn-survey-action" onclick="shareSurvey('${survey.id}')">공유</button>
+                <button class="btn-survey-action" onclick="editSurvey('${survey.id}')">수정</button>
+                <button class="btn-survey-action" onclick="shareSurvey('${survey.id}')">링크 확인</button>
+                <button class="btn-survey-action btn-survey-delete" onclick="deleteSurvey('${survey.id}')">삭제</button>
             </div>
         `;
 
@@ -560,6 +656,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function editSurvey(surveyId) {
+        const survey = state.surveyMap.get(surveyId);
+        if (survey) {
+            const st = survey.status || 'draft';
+            if (st === 'active' || st === 'published') {
+                const proceed = confirm('주의: 배포 중인 설문을 수정하면 기존 응답 데이터에 영향을 줄 수 있습니다. 계속하시겠습니까?');
+                if (!proceed) {
+                    return;
+                }
+            }
+        }
         window.location.href = `survey.html?surveyId=${surveyId}`;
     }
 
@@ -634,7 +740,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function deleteSurvey(surveyId) {
-        if (!confirm('이 설문을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+        const first = confirm('정말 이 설문을 삭제하시겠습니까?');
+        if (!first) return;
+        const second = confirm('삭제된 설문과 수집된 데이터는 복구할 수 없습니다. 계속하시겠습니까?');
+        if (!second) return;
         try {
             await API.deleteSurvey(surveyId);
             await refreshSurveys();
@@ -693,9 +802,9 @@ document.addEventListener('DOMContentLoaded', () => {
         menu.style.padding = '6px';
         menu.style.zIndex = '100';
         menu.innerHTML = `
-            <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px;" onclick="editSurvey('${surveyId}')">편집</button>
-            <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px;" onclick="viewResults('${surveyId}')">결과 보기</button>
-            <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px;" onclick="shareSurvey('${surveyId}')">공유</button>
+            <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px;" onclick="editSurvey('${surveyId}')">수정</button>
+            <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px;" onclick="shareSurvey('${surveyId}')">링크 확인</button>
+            <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px;" onclick="openMoveFolderModal('${surveyId}')">폴더로 이동</button>
             <button class="btn-survey-action" style="display:block; width:180px; text-align:left; margin:4px 2px; color:#c0392b;" onclick="deleteSurvey('${surveyId}')">삭제</button>
         `;
         const header = anchorEl.closest('.survey-card-header');
@@ -729,6 +838,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.createFolder = createFolder;
     window.renameFolder = renameFolder;
     window.deleteFolder = deleteFolder;
+    window.openMoveFolderModal = openMoveFolderModal;
+    window.closeMoveFolderModal = closeMoveFolderModal;
+    window.applyMoveFolder = applyMoveFolder;
     // exports removed
 
     // 배포 종료 / 재배포 버튼 클릭 처리 (이벤트 위임)
