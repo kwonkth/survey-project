@@ -15,6 +15,28 @@ let lastCreatedSurveyId = '';
 let currentSurveyId = null;
 let aiGeneratedSurvey = null;
 
+// Main page API helper for surveys (Cloudflare Worker backend)
+const API = {
+    async postSurvey(payload) {
+        const res = await fetch('/api/surveys', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            throw new Error(`POST /api/surveys ${res.status}`);
+        }
+        return res.json();
+    },
+    async getSurvey(id) {
+        const res = await fetch(`/api/surveys/${encodeURIComponent(id)}`, { method: 'GET' });
+        if (!res.ok) {
+            throw new Error(`GET /api/surveys/${id} ${res.status}`);
+        }
+        return res.json();
+    }
+};
+
 /* =======================================================
    초기화 – DOMContentLoaded
 ======================================================= */
