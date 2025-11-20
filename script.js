@@ -126,7 +126,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     <span class="ai-q-label">Q${index + 1}</span>
                 </div>
                 <div class="ai-q-header-right">
-                    <button type="button" class="btn-icon ai-q-ai-rewrite" title="AI로 질문 다듬기">✨</button>
                     <button type="button" class="btn-icon ai-q-duplicate" title="질문 복제">❐</button>
                     <button type="button" class="btn-icon ai-q-delete" title="질문 삭제">🗑️</button>
                 </div>
@@ -751,21 +750,34 @@ function importSurveysFromJSON(json) {
             window.location.href = url;
         });
     }
+
+    // 설문관리 페이지에서 넘어온 기존 설문 편집 진입 (index.html?surveyId=...)
+    (async () => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const editSurveyId = params.get('surveyId');
+            if (!editSurveyId || !aiPreviewModal) return;
+
+            const found = await API.getSurvey(editSurveyId);
+            if (!found || !(found.survey_id || found.id)) return;
+
+            let questions = found.questions;
+            if (typeof questions === 'string') {
+                try { questions = JSON.parse(questions); } catch { questions = []; }
+            }
+
+            aiGeneratedSurvey = {
+                title: found.title || '제목 없음',
+                description: found.description || '',
+                questions: Array.isArray(questions) ? questions : []
+            };
+
+            openAiPreviewModal();
+        } catch (err) {
+            console.error('기존 설문 편집을 위한 로드 중 오류', err);
+        }
+    })();
 });
-
-
-// Cloudflare API client
-const API = {
-    async postSurvey(payload) {
-        const res = await fetch('/api/surveys', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error(`POST /api/surveys ${res.status}`);
-        return res.json();
-    }
-};
 
 /* =======================================================
    이벤트 리스너 초기화
@@ -1032,12 +1044,6 @@ function initEventListeners() {
             }
             return;
         }
-
-        /* ✦ AI 미리보기: AI로 질문 다시 쓰기 (플레이스홀더) */
-        if (e.target.closest('.ai-q-ai-rewrite')) {
-            alert('"AI로 질문 다듬기" 기능은 서버의 추가 AI API가 필요합니다. 현재는 준비 중입니다.');
-            return;
-        }
     });
 
     /* --- 입력 검증 (제목/질문/옵션 입력 시) --- */
@@ -1109,11 +1115,6 @@ function addNewChapter() {
                 <button class="btn-icon">🎨</button>
                 <button class="btn-icon">🗑️</button>
             </div>
-        </div>
-
-        <div class="form-group">
-            <label>NPC 대사</label>
-            <textarea class="form-control" rows="2"></textarea>
         </div>
 
         <div class="form-group">

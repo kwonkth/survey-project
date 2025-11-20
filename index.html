@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fantasy Quest Survey Tool</title>
+    <title>Fantasy Survey Tool</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -13,7 +13,7 @@
 
             <!-- Header -->
             <header class="app-header">
-                <div class="logo" onclick="navigateTo('index.html')">퀘스트 설문 마법사</div>
+                <div class="logo" onclick="navigateTo('index.html')">설문 마법사</div>
                 <nav>
                     <button class="nav-btn active" onclick="navigateTo('index.html')">대시보드</button>
                     <button class="nav-btn" onclick="navigateTo('dashboard.html')">설문 관리</button>
@@ -28,17 +28,17 @@
                 <div class="dashboard-grid">
                     <div class="dashboard-card new-survey">
                         <h2>새 설문조사 만들기</h2>
-                        <p>마법의 퀘스트를 시작해보세요!</p>
+                        <p>마법의 설문을 시작해보세요!</p>
                         <button id="openAiGenModal" class="primary-btn">✨ AI 설문 만들기 시작</button>
                     </div>
 
                     <div class="dashboard-card" id="inProgressQuestContainer">
-                        <h3>작업 중인 퀘스트</h3>
+                        <h3>작업 중인 설문</h3>
                         <div class="empty-quest-item">최근 작업한 설문이 없습니다.</div>
                     </div>
 
                     <div class="dashboard-card" id="questStatsContainer">
-                        <h3>퀘스트 통계</h3>
+                        <h3>설문 통계</h3>
                         <div class="empty-quest-item">통계 데이터가 없습니다.</div>
                     </div>
                 </div>
@@ -52,34 +52,23 @@
 
                     <!-- Steps -->
                     <div class="creation-steps">
-                        <div class="step active" data-step="1">1. 퀘스트 기본 정보</div>
+                        <div class="step active" data-step="1">1. 설문 기본 정보</div>
                         <div class="step" data-step="2">2. 질문 디자인</div>
                         <div class="step" data-step="3">3. 보상 설정</div>
                     </div>
 
                     <!-- STEP 1 -->
                     <div id="step1" class="step-content active">
-                        <h2>퀘스트 기본 정보</h2>
+                        <h2>설문 기본 정보</h2>
 
                         <div class="form-group">
-                            <label>퀘스트 제목</label>
-                            <input id="surveyTitle" type="text" class="form-control" placeholder="예: 마법 시험 퀘스트">
+                            <label>설문 제목</label>
+                            <input id="surveyTitle" type="text" class="form-control" placeholder="예: 마법 시험 설문">
                         </div>
 
                         <div class="form-group">
-                            <label>퀘스트 설명</label>
-                            <textarea id="surveyDescription" class="form-control" rows="3" placeholder="퀘스트 설명을 입력하세요"></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>NPC 아바타 선택</label>
-                            <div class="avatar-selection">
-                                <div class="avatar-option selected">
-                                    <span>마법사</span>
-                                </div>
-                                <div class="avatar-option"><span>기사</span></div>
-                                <div class="avatar-option"><span>상인</span></div>
-                            </div>
+                            <label>설문 설명</label>
+                            <textarea id="surveyDescription" class="form-control" rows="3" placeholder="설문 설명을 입력하세요"></textarea>
                         </div>
 
                         <div class="form-actions">
@@ -95,14 +84,14 @@
                         <div class="question-blocks">
                             <div class="question-block">
                                 <div class="question-header">
-                                    <h3>Chapter 1</h3>
+                                    <h3>질문 1</h3>
                                     <div class="question-actions">
                                         <button class="btn-icon">🎨</button>
                                         <button class="btn-icon">🗑️</button>
                                     </div>
                                 </div>
 
-                                <textarea class="form-control" rows="2" placeholder="NPC 대사 입력"></textarea>
+                                <textarea class="form-control" rows="2" placeholder="질문 안내 문구를 입력하세요"></textarea>
 
                                 <select class="form-control">
                                     <option>객관식 (단일 선택)</option>
@@ -133,13 +122,13 @@
 
                     <!-- STEP 3 -->
                     <div id="step3" class="step-content">
-                        <h2>퀘스트 보상 설정</h2>
+                        <h2>보상 설정</h2>
 
-                        <textarea class="form-control" rows="3">축하합니다! 퀘스트 완료입니다!</textarea>
+                        <textarea class="form-control" rows="3">축하합니다! 설문 완료입니다!</textarea>
 
                         <div class="form-actions">
                             <button class="btn btn-secondary prev-step" data-prev="2">이전</button>
-                            <button id="completeSurvey" class="btn btn-primary">퀘스트 완성하기</button>
+                            <button id="completeSurvey" class="btn btn-primary">설문 완성하기</button>
                         </div>
                     </div>
                 </div>
@@ -149,8 +138,8 @@
             <div id="completionModal" class="modal">
                 <div class="modal-content completion">
 
-                    <h2>🎉 퀘스트가 완성되었습니다!</h2>
-                    <p>아래 링크를 통해 퀘스트를 공유하세요.</p>
+                    <h2>🎉 설문이 완성되었습니다!</h2>
+                    <p>아래 링크를 통해 설문을 공유하세요.</p>
 
                     <div class="qr-code-container">
                         <img id="qrCodeImage" src="">

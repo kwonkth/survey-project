@@ -666,7 +666,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        window.location.href = `survey.html?surveyId=${surveyId}`;
+        // 메인 화면의 AI 설문 미리보기 & 편집 모달을 재사용하기 위해 index.html로 이동
+        window.location.href = `index.html?surveyId=${encodeURIComponent(surveyId)}`;
     }
 
     function viewResults(surveyId) {
