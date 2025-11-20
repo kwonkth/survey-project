@@ -340,65 +340,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderOptionBarsForAllQuestions(surveyId){
-    const ctx = document.getElementById('chart1');
-    const containerEmpty = document.getElementById('dropoutEmpty');
-    if (!ctx) return;
-
-    const stats = state.latestStats;
-    if (!stats || stats.surveyId !== surveyId || !Array.isArray(stats.questions) || !stats.questions.length) {
-      if (state.selectedDropoutChart) { state.selectedDropoutChart.destroy(); state.selectedDropoutChart = null; }
-      if (containerEmpty) containerEmpty.style.display = 'block';
-      return;
-    }
-
-    const questions = stats.questions;
-    const labels = questions.map(q => `Q${q.number}`);
-    const data = questions.map(q => q.respondedCount || 0);
-
-    if (state.selectedDropoutChart) {
-      state.selectedDropoutChart.destroy();
-      state.selectedDropoutChart = null;
-    }
-
-    state.selectedDropoutChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: '응답 수',
-          data,
-          backgroundColor: '#4a6baf',
-          borderColor: '#4a6baf',
-          borderWidth: 1,
-          maxBarThickness: 18
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        scales: {
-          x: {
-            beginAtZero: true,
-            ticks: { precision: 0 }
-          }
-        },
-        plugins: {
-          legend: { display: false },
-          datalabels: {
-            display: true,
-            color: '#333',
-            anchor: 'end',
-            align: 'right',
-            font: { weight: 'bold', size: 10 },
-            formatter: (value) => value ? String(value) : ''
-          }
-        }
-      },
-      plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
-    });
-
-    if (containerEmpty) containerEmpty.style.display = 'none';
+    // 막대그래프는 더 이상 사용하지 않으므로 비워둡니다.
+    return;
   }
 
   function renderOptionDoughnut(surveyId, questionId){
@@ -426,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
           legend: { position: 'bottom' },
           datalabels: {
             color: '#333',
-            font: { weight: 'bold', size: 11 },
+            font: { weight: '700', size: 13 },
             formatter: (value, context) => {
               const dataArr = context.chart.data.datasets[0].data || [];
               const total = dataArr.reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
@@ -461,7 +404,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (titleEl) {
-      titleEl.textContent = `Q${q.number}. ${q.text || ''}`;
+      const base = `Q${q.number}. ${q.text || ''}`;
+      const t = String(q.type || '').toLowerCase();
+      const isMulti = t === 'checkbox' || /checkbox|복수|다중|체크/.test(t);
+      titleEl.textContent = isMulti ? `${base} (복수 선택 가능)` : base;
     }
     if (totalEl) {
       const total = typeof q.respondedCount === 'number' ? q.respondedCount : 0;
@@ -486,8 +432,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const stats = computeSurveyStats(meta, responses);
       // latestStats에 원시 응답도 포함시켜 JSON 내보내기에서 실제 답변 내용을 볼 수 있도록 함
       state.latestStats = { surveyId, title: meta.title, rawResponses: responses, ...stats };
-
-      renderOptionBarsForAllQuestions(surveyId);
       populateQuestionSelect(surveyId);
     }).catch(() => {
       // failure state: clear visuals
