@@ -1299,7 +1299,143 @@ async function handleCompleteSurvey() {
 
 /* =======================================================
    대시보드(메인 index.html) 렌더링
+   - 좌측: 전체 설문 통계 카드 (개수 / 총 응답 / 평균 완료율)
+   - 우측: 가장 최근 설문 완료율 도넛 그래프
 ======================================================= */
+let latestSurveyDonutChart = null;
+
+const latestDonutCenterPlugin = {
+    id: 'latestDonutCenter',
+    afterDraw(chart, args, opts) {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+        const text = opts && typeof opts.text === 'string' ? opts.text : '';
+        if (!text) return;
+        const x = (chartArea.left + chartArea.right) / 2;
+        const y = (chartArea.top + chartArea.bottom) / 2;
+        ctx.save();
+        ctx.font = '700 22px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif';
+        ctx.fillStyle = '#2d3436';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x, y);
+        ctx.restore();
+    }
+};
+
+async function getNormalizedResultsForDashboard(surveyId) {
+    try {
+        const res = await fetch(`/api/results/${encodeURIComponent(surveyId)}`, { method: 'GET' });
+        if (!res.ok) return [];
+        const rows = await res.json();
+        const out = [];
+        (rows || []).forEach(row => {
+            let ansObj = row.answers;
+            if (typeof ansObj === 'string') {
+                try { ansObj = JSON.parse(ansObj); } catch { ansObj = {}; }
+            }
+            let arr = [];
+            if (Array.isArray(ansObj)) {
+                arr = ansObj.map(a => ({ questionId: a.questionId, value: a.value }));
+            } else if (ansObj && typeof ansObj === 'object') {
+                Object.keys(ansObj).forEach(qid => {
+                    const v = ansObj[qid];
+                    arr.push({ questionId: qid, value: v });
+                });
+            }
+            out.push({ answers: arr, createdAt: row.created_at });
+        });
+        return out;
+    } catch {
+        return [];
+    }
+}
+
+function calcCompletionSummaryForDashboard(questions, responses) {
+    const qCount = Array.isArray(questions) ? questions.length : 0;
+    if (!responses.length || !qCount) {
+        return { completionRate: 0, completedCount: 0 };
+    }
+    const completedCount = responses.filter(r => Array.isArray(r.answers) && r.answers.length === qCount).length;
+    const completionRate = responses.length ? Math.round((completedCount / responses.length) * 100) : 0;
+    return { completionRate, completedCount };
+}
+
+function renderLatestSurveyDonutCard(latestMeta) {
+    const titleEl = document.getElementById('latestSurveyTitle');
+    const completionEl = document.getElementById('latestSurveyCompletion');
+    const countsEl = document.getElementById('latestSurveyCounts');
+    const updatedEl = document.getElementById('latestSurveyUpdated');
+    const canvas = document.getElementById('latestSurveyDonut');
+
+    if (!canvas) return;
+
+    const hasData = latestMeta && typeof latestMeta.completionRate === 'number';
+    const rate = hasData ? latestMeta.completionRate : 0;
+    const completed = hasData ? latestMeta.completedCount : 0;
+    const total = hasData ? latestMeta.responsesCount : 0;
+    const title = latestMeta?.title || '-';
+    const updatedAt = latestMeta?.updatedAt || null;
+
+    if (titleEl) titleEl.textContent = hasData ? `최신 설문: "${title}"` : '최근 설문 데이터가 없습니다.';
+    if (completionEl) completionEl.textContent = `완료율: ${rate}%`;
+    if (countsEl) countsEl.textContent = `응답수: ${completed} / ${total}`;
+    if (updatedEl) {
+        if (updatedAt) {
+            const d = new Date(updatedAt);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            updatedEl.textContent = `최근 업데이트: ${y}-${m}-${day}`;
+        } else {
+            updatedEl.textContent = '최근 업데이트: -';
+        }
+    }
+
+    if (typeof Chart === 'undefined') return;
+
+    if (latestSurveyDonutChart) {
+        latestSurveyDonutChart.destroy();
+        latestSurveyDonutChart = null;
+    }
+
+    const ctx = canvas.getContext('2d');
+    const data = [rate, Math.max(0, 100 - rate)];
+
+    latestSurveyDonutChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['완료', '미완료'],
+            datasets: [{
+                data,
+                backgroundColor: ['#6C5CE7', '#dfe6e9'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const label = ctx.label || '';
+                            const v = ctx.parsed || 0;
+                            return `${label}: ${v}%`;
+                        }
+                    }
+                },
+                latestDonutCenter: {
+                    text: `${rate}%`
+                }
+            }
+        },
+        plugins: [latestDonutCenterPlugin]
+    });
+}
+
 async function renderMainDashboard() {
     const inProgress = document.getElementById('inProgressQuestContainer');
     const stats = document.getElementById('questStatsContainer');
@@ -1342,18 +1478,79 @@ async function renderMainDashboard() {
             }
         }
 
+        // 설문 메타 정보 정규화
+        const metaSurveys = (surveys || []).map(row => {
+            let questions = row.questions;
+            if (typeof questions === 'string') {
+                try { questions = JSON.parse(questions); } catch { questions = []; }
+            }
+            return {
+                id: row.survey_id || row.id,
+                title: row.title || '제목 없음',
+                questions: Array.isArray(questions) ? questions : [],
+                createdAt: row.created_at || row.createdAt || null,
+                updatedAt: row.updated_at || row.updatedAt || row.created_at || null
+            };
+        });
+
+        let totalResponses = 0;
+        const enriched = [];
+
+        for (const s of metaSurveys) {
+            const responses = await getNormalizedResultsForDashboard(s.id);
+            const { completionRate, completedCount } = calcCompletionSummaryForDashboard(s.questions, responses);
+            const info = {
+                ...s,
+                responsesCount: responses.length,
+                completedCount,
+                completionRate
+            };
+            enriched.push(info);
+            totalResponses += responses.length;
+        }
+
+        const withResponses = enriched.filter(s => s.responsesCount > 0);
+        const avgCompletion = withResponses.length
+            ? Math.round(withResponses.reduce((sum, s) => sum + (s.completionRate || 0), 0) / withResponses.length)
+            : 0;
+
+        const latest = enriched
+            .slice()
+            .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))[0] || null;
+
         if (stats) {
             stats.innerHTML = `
                 <h3> 설문 통계 </h3>
-                <div class="stat-item"><span class="stat-value">${surveys.length}</span><span class="stat-label">총 퀘스트</span></div>
-                <div class="stat-item"><span class="stat-value">0</span><span class="stat-label">총 응답</span></div>
-                <div class="stat-item"><span class="stat-value">0%</span><span class="stat-label">평균 완료율</span></div>
+                <div class="dashboard-stats-grid">
+                    <div class="dashboard-stats-left">
+                        <div class="stat-item"><span class="stat-value">${metaSurveys.length}</span><span class="stat-label">설문 개수</span></div>
+                        <div class="stat-item"><span class="stat-value">${totalResponses}</span><span class="stat-label">총 응답</span></div>
+                        <div class="stat-item"><span class="stat-value">${avgCompletion}%</span><span class="stat-label">평균 완료율</span></div>
+                    </div>
+                    <div class="latest-survey-card">
+                        <div class="latest-survey-header">
+                            <div class="latest-survey-title">최근 설문 완료율</div>
+                            <div class="latest-survey-main-number">${latest ? latest.completionRate : 0}%</div>
+                        </div>
+                        <div class="latest-survey-donut-wrap">
+                            <canvas id="latestSurveyDonut"></canvas>
+                        </div>
+                        <div class="latest-survey-meta">
+                            <div id="latestSurveyTitle">-</div>
+                            <div id="latestSurveyCompletion">완료율: 0%</div>
+                            <div id="latestSurveyCounts">응답수: 0 / 0</div>
+                            <div id="latestSurveyUpdated">최근 업데이트: -</div>
+                        </div>
+                    </div>
+                </div>
             `;
             stats.style.cursor = 'pointer';
             stats.onclick = () => { window.location.href = 'analytics.html'; };
         }
+
+        renderLatestSurveyDonutCard(latest);
     } catch (e) {
-        if (inProgress) inProgress.innerHTML = '<h3>작업 중인 퀘스트</h3><div class="empty-quest-item">API 오류로 목록을 불러오지 못했습니다.</div>';
+        if (inProgress) inProgress.innerHTML = '<h3>작업 중인 설문</h3><div class="empty-quest-item">API 오류로 목록을 불러오지 못했습니다.</div>';
     }
 }
 
