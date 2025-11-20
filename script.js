@@ -280,6 +280,45 @@ document.addEventListener("DOMContentLoaded", () => {
         textarea.value = values.join('\n');
     }
 
+    function applyQuestionTypeUi(wrapper) {
+        if (!wrapper) return;
+        const typeSelect = wrapper.querySelector('.ai-q-type');
+        const optionsGroup = wrapper.querySelector('.ai-q-options-group');
+        const maxGroup = wrapper.querySelector('.ai-q-maxselection-group');
+        const visibilityGroup = wrapper.querySelector('.ai-q-visibility-group');
+        if (!typeSelect || !optionsGroup) return;
+
+        const v = typeSelect.value || 'text';
+        const isTextBase = v.startsWith('text');
+        const isDependentType = v === 'text-dependent';
+
+        if (isTextBase) {
+            optionsGroup.style.display = 'none';
+            if (maxGroup) maxGroup.style.display = 'none';
+        } else {
+            optionsGroup.style.display = '';
+            if (maxGroup) {
+                maxGroup.style.display = v === 'checkbox' ? '' : 'none';
+            }
+        }
+
+        if (visibilityGroup) {
+            visibilityGroup.style.display = isDependentType ? '' : 'none';
+        }
+
+        // 종속형으로 전환되었을 때 부모 질문 번호를 비워둔 경우, 바로 이전 질문을 기본 부모로 설정
+        if (isDependentType) {
+            const parentIndexInput = wrapper.querySelector('.ai-q-parent-index');
+            if (parentIndexInput && !parentIndexInput.value && aiPreviewQuestionContainer) {
+                const cards = Array.from(aiPreviewQuestionContainer.querySelectorAll('.ai-preview-question'));
+                const idx = cards.indexOf(wrapper);
+                if (idx > 0) {
+                    parentIndexInput.value = String(idx); // 직전 질문을 부모로 기본 설정
+                }
+            }
+        }
+    }
+
     function renumberPreviewQuestions() {
         const rows = aiPreviewQuestionContainer?.querySelectorAll('.ai-preview-question') || [];
         rows.forEach((row, idx) => {
@@ -459,6 +498,143 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (wrapper) syncOptionsToTextarea(wrapper);
             }
         });
+
+        // AI 미리보기/편집 영역 내부 클릭 이벤트 처리 (삭제, 복제, 옵션 추가/삭제, 일괄 입력 등)
+        aiPreviewQuestionContainer.addEventListener('click', (e) => {
+            // 질문 삭제
+            if (e.target.closest('.ai-q-delete')) {
+                const card = e.target.closest('.ai-preview-question');
+                if (card) {
+                    card.remove();
+                    if (typeof renumberPreviewQuestions === 'function') {
+                        renumberPreviewQuestions();
+                    }
+                }
+                return;
+            }
+
+            // 질문 복제 (최대 30문항 제한)
+            if (e.target.closest('.ai-q-duplicate')) {
+                if (!aiPreviewQuestionContainer) return;
+                const currentCount = aiPreviewQuestionContainer.querySelectorAll('.ai-preview-question').length;
+                if (currentCount >= 30) {
+                    alert('질문은 최대 30문항까지만 추가할 수 있습니다.');
+                    return;
+                }
+                const card = e.target.closest('.ai-preview-question');
+                if (card) {
+                    const clone = card.cloneNode(true);
+                    aiPreviewQuestionContainer.appendChild(clone);
+                    if (typeof renumberPreviewQuestions === 'function') {
+                        renumberPreviewQuestions();
+                    }
+                }
+                return;
+            }
+
+            // 옵션 한 줄 추가
+            if (e.target.closest('.ai-add-option-row')) {
+                const group = e.target.closest('.ai-q-options-group');
+                if (group) {
+                    const list = group.querySelector('.ai-option-list');
+                    if (list) {
+                        const row = document.createElement('div');
+                        row.className = 'ai-option-row';
+                        row.innerHTML = `
+                            <span class="ai-option-handle" draggable="true" title="보기 순서 변경">≡</span>
+                            <input type="text" class="form-control ai-option-input" />
+                            <button type="button" class="btn-icon ai-option-delete">🗑️</button>
+                        `;
+                        list.appendChild(row);
+                        if (typeof syncOptionsToTextarea === 'function') {
+                            const wrapper = group.closest('.ai-preview-question');
+                            if (wrapper) syncOptionsToTextarea(wrapper);
+                        }
+                    }
+                }
+                return;
+            }
+
+            // 옵션 삭제
+            if (e.target.closest('.ai-option-delete')) {
+                const row = e.target.closest('.ai-option-row');
+                if (row) {
+                    const wrapper = row.closest('.ai-preview-question');
+                    row.remove();
+                    if (wrapper && typeof syncOptionsToTextarea === 'function') {
+                        syncOptionsToTextarea(wrapper);
+                    }
+                }
+                return;
+            }
+
+            // 일괄 입력 모드 토글
+            if (e.target.closest('.ai-bulk-toggle')) {
+                const group = e.target.closest('.ai-q-options-group');
+                if (group) {
+                    const bulk = group.querySelector('.ai-bulk-editor');
+                    const textareaBulk = group.querySelector('.ai-bulk-text');
+                    const hidden = group.querySelector('.ai-q-options');
+                    const wrapper = group.closest('.ai-preview-question');
+                    if (bulk && textareaBulk && hidden && wrapper) {
+                        if (typeof syncOptionsToTextarea === 'function') {
+                            syncOptionsToTextarea(wrapper);
+                        }
+                        textareaBulk.value = hidden.value;
+                        bulk.style.display = bulk.style.display === 'none' || !bulk.style.display ? 'block' : 'none';
+                    }
+                }
+                return;
+            }
+
+            // 일괄 입력 취소
+            if (e.target.closest('.ai-bulk-cancel')) {
+                const bulk = e.target.closest('.ai-bulk-editor');
+                if (bulk) bulk.style.display = 'none';
+                return;
+            }
+
+            // 일괄 입력 적용
+            if (e.target.closest('.ai-bulk-apply')) {
+                const bulk = e.target.closest('.ai-bulk-editor');
+                if (bulk) {
+                    const group = bulk.closest('.ai-q-options-group');
+                    const textareaBulk = bulk.querySelector('.ai-bulk-text');
+                    const list = group?.querySelector('.ai-option-list');
+                    const wrapper = bulk.closest('.ai-preview-question');
+                    if (group && textareaBulk && list) {
+                        list.innerHTML = '';
+                        const lines = textareaBulk.value.split('\n').map(v => v.trim()).filter(Boolean);
+                        if (lines.length === 0) {
+                            lines.push('');
+                        }
+                        lines.forEach(text => {
+                            const row = document.createElement('div');
+                            row.className = 'ai-option-row';
+                            row.innerHTML = `
+                                <span class="ai-option-handle" draggable="true" title="보기 순서 변경">≡</span>
+                                <input type="text" class="form-control ai-option-input" value="${escapeHtml(text)}" />
+                                <button type="button" class="btn-icon ai-option-delete">🗑️</button>
+                            `;
+                            list.appendChild(row);
+                        });
+                        if (wrapper && typeof syncOptionsToTextarea === 'function') {
+                            syncOptionsToTextarea(wrapper);
+                        }
+                    }
+                    bulk.style.display = 'none';
+                }
+                return;
+            }
+        });
+
+        // 질문 유형 변경 시 타입/종속 UI 반영
+        aiPreviewQuestionContainer.addEventListener('change', (e) => {
+            if (e.target.classList.contains('ai-q-type')) {
+                const wrapper = e.target.closest('.ai-preview-question');
+                applyQuestionTypeUi(wrapper);
+            }
+        });
     }
 
     if (aiPreviewTabs && aiPreviewTabs.length) {
@@ -600,35 +776,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }, index);
             aiPreviewQuestionContainer.appendChild(wrapper);
             setupQuestionOptionList(wrapper, safeOptions);
-
-            const typeSelect = wrapper.querySelector('.ai-q-type');
-            const optionsGroup = wrapper.querySelector('.ai-q-options-group');
-            const maxGroup = wrapper.querySelector('.ai-q-maxselection-group');
-            const visibilityGroup = wrapper.querySelector('.ai-q-visibility-group');
-            if (typeSelect && optionsGroup) {
-                const applyTypeUi = () => {
-                    const v = typeSelect.value || 'text';
-                    const isTextBase = v.startsWith('text');
-                    const isDependentType = v === 'text-dependent';
-
-                    if (isTextBase) {
-                        optionsGroup.style.display = 'none';
-                        if (maxGroup) maxGroup.style.display = 'none';
-                    } else {
-                        optionsGroup.style.display = '';
-                        if (maxGroup) {
-                            maxGroup.style.display = v === 'checkbox' ? '' : 'none';
-                        }
-                    }
-
-                    if (visibilityGroup) {
-                        visibilityGroup.style.display = isDependentType ? '' : 'none';
-                    }
-                };
-
-                applyTypeUi();
-                typeSelect.addEventListener('change', applyTypeUi);
-            }
+            applyQuestionTypeUi(wrapper);
         });
 
         renumberPreviewQuestions();
@@ -655,6 +803,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (aiGenCancel) {
         aiGenCancel.addEventListener('click', closeAiModal);
+    }
+
+    // AI 미리보기: 새 질문 추가 버튼 (최대 30문항)
+    if (aiAddQuestionBtn && aiPreviewQuestionContainer) {
+        aiAddQuestionBtn.addEventListener('click', () => {
+            const currentCount = aiPreviewQuestionContainer.querySelectorAll('.ai-preview-question').length;
+            if (currentCount >= 30) {
+                alert('질문은 최대 30문항까지만 추가할 수 있습니다.');
+                return;
+            }
+            const index = currentCount;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'ai-preview-question';
+            const q = { text: '', type: 'radio', required: true, options: [] };
+            wrapper.innerHTML = buildQuestionEditorHtml(q, index);
+            aiPreviewQuestionContainer.appendChild(wrapper);
+            setupQuestionOptionList(wrapper, q.options);
+            applyQuestionTypeUi(wrapper);
+            if (typeof renumberPreviewQuestions === 'function') {
+                renumberPreviewQuestions();
+            }
+        });
     }
 
     // 바깥 영역(오버레이) 클릭 시 모달이 닫히지 않도록 기본 동작을 막는다.
@@ -1183,143 +1353,6 @@ function initEventListeners() {
         /* ✦ 설문 완성 버튼 */
         if (e.target.id === "completeSurvey") {
             handleCompleteSurvey();
-            return;
-        }
-
-        /* ✦ AI 미리보기: 질문 삭제 */
-        if (e.target.closest('.ai-q-delete')) {
-            const card = e.target.closest('.ai-preview-question');
-            if (card) {
-                card.remove();
-                if (typeof renumberPreviewQuestions === 'function') {
-                    renumberPreviewQuestions();
-                }
-            }
-            return;
-        }
-
-        /* ✦ AI 미리보기: 질문 복제 */
-        if (e.target.closest('.ai-q-duplicate')) {
-            const card = e.target.closest('.ai-preview-question');
-            if (card && aiPreviewQuestionContainer) {
-                const clone = card.cloneNode(true);
-                aiPreviewQuestionContainer.appendChild(clone);
-                if (typeof renumberPreviewQuestions === 'function') {
-                    renumberPreviewQuestions();
-                }
-            }
-            return;
-        }
-
-        /* ✦ AI 미리보기: 새 질문 추가 */
-        if (e.target.id === 'aiAddQuestionBtn') {
-            if (aiPreviewQuestionContainer) {
-                const index = aiPreviewQuestionContainer.querySelectorAll('.ai-preview-question').length;
-                const wrapper = document.createElement('div');
-                wrapper.className = 'ai-preview-question';
-                const q = { text: '', type: 'radio', required: true, options: [] };
-                wrapper.innerHTML = buildQuestionEditorHtml(q, index);
-                aiPreviewQuestionContainer.appendChild(wrapper);
-                setupQuestionOptionList(wrapper, q.options);
-                if (typeof renumberPreviewQuestions === 'function') {
-                    renumberPreviewQuestions();
-                }
-            }
-            return;
-        }
-
-        /* ✦ AI 미리보기: 옵션 한 줄 추가 */
-        if (e.target.closest('.ai-add-option-row')) {
-            const group = e.target.closest('.ai-q-options-group');
-            if (group) {
-                const list = group.querySelector('.ai-option-list');
-                if (list) {
-                    const row = document.createElement('div');
-                    row.className = 'ai-option-row';
-                    row.innerHTML = `
-                        <span class="ai-option-handle" draggable="true" title="보기 순서 변경">≡</span>
-                        <input type="text" class="form-control ai-option-input" />
-                        <button type="button" class="btn-icon ai-option-delete">🗑️</button>
-                    `;
-                    list.appendChild(row);
-                    if (typeof syncOptionsToTextarea === 'function') {
-                        const wrapper = group.closest('.ai-preview-question');
-                        if (wrapper) syncOptionsToTextarea(wrapper);
-                    }
-                }
-            }
-            return;
-        }
-
-        /* ✦ AI 미리보기: 옵션 삭제 */
-        if (e.target.closest('.ai-option-delete')) {
-            const row = e.target.closest('.ai-option-row');
-            if (row) {
-                const wrapper = row.closest('.ai-preview-question');
-                row.remove();
-                if (wrapper && typeof syncOptionsToTextarea === 'function') {
-                    syncOptionsToTextarea(wrapper);
-                }
-            }
-            return;
-        }
-
-        /* ✦ AI 미리보기: 일괄 입력 모드 토글 */
-        if (e.target.closest('.ai-bulk-toggle')) {
-            const group = e.target.closest('.ai-q-options-group');
-            if (group) {
-                const bulk = group.querySelector('.ai-bulk-editor');
-                const textareaBulk = group.querySelector('.ai-bulk-text');
-                const hidden = group.querySelector('.ai-q-options');
-                const wrapper = group.closest('.ai-preview-question');
-                if (bulk && textareaBulk && hidden && wrapper) {
-                    if (typeof syncOptionsToTextarea === 'function') {
-                        syncOptionsToTextarea(wrapper);
-                    }
-                    textareaBulk.value = hidden.value;
-                    bulk.style.display = bulk.style.display === 'none' || !bulk.style.display ? 'block' : 'none';
-                }
-            }
-            return;
-        }
-
-        /* ✦ AI 미리보기: 일괄 입력 취소 */
-        if (e.target.closest('.ai-bulk-cancel')) {
-            const bulk = e.target.closest('.ai-bulk-editor');
-            if (bulk) bulk.style.display = 'none';
-            return;
-        }
-
-        /* ✦ AI 미리보기: 일괄 입력 적용 */
-        if (e.target.closest('.ai-bulk-apply')) {
-            const bulk = e.target.closest('.ai-bulk-editor');
-            if (bulk) {
-                const group = bulk.closest('.ai-q-options-group');
-                const textareaBulk = bulk.querySelector('.ai-bulk-text');
-                const list = group?.querySelector('.ai-option-list');
-                const wrapper = bulk.closest('.ai-preview-question');
-                if (group && textareaBulk && list) {
-                    list.innerHTML = '';
-                    const lines = textareaBulk.value.split('\n').map(v => v.trim()).filter(Boolean);
-                    if (lines.length === 0) {
-                        lines.push('');
-                    }
-                    lines.forEach(text => {
-                        const row = document.createElement('div');
-                        row.className = 'ai-option-row';
-                        row.innerHTML = `
-                            <span class="ai-option-handle" draggable="true" title="보기 순서 변경">≡</span>
-                            <input type="text" class="form-control ai-option-input" value="${escapeHtml(text)}" />
-                            <button type="button" class="btn-icon ai-option-delete">🗑️</button>
-                        `;
-                        list.appendChild(row);
-                    });
-                    if (wrapper && typeof syncOptionsToTextarea === 'function') {
-                        syncOptionsToTextarea(wrapper);
-                    }
-                }
-                bulk.style.display = 'none';
-            }
             return;
         }
     });
