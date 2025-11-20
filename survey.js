@@ -75,12 +75,56 @@ document.addEventListener('DOMContentLoaded', () => {
         renderQuestion();
     }
 
+    function isQuestionVisible(question, answers) {
+        if (!question || !question.visibility) return true;
+        const parentId = question.visibility.parentId;
+        const expected = question.visibility.value;
+        if (!parentId || expected == null) return true;
+
+        const parentAnswer = answers.find(a => a.questionId === parentId);
+        if (!parentAnswer) return false;
+
+        const v = parentAnswer.value;
+        if (Array.isArray(v)) {
+            return v.includes(expected);
+        }
+        return v === expected;
+    }
+
+    function findNextVisibleQuestionIndex(fromIndex) {
+        const questions = Array.isArray(state.survey?.questions) ? state.survey.questions : [];
+        for (let i = fromIndex; i < questions.length; i++) {
+            if (isQuestionVisible(questions[i], state.answers)) {
+                return i;
+            }
+        }
+        return questions.length;
+    }
+
     function renderQuestion() {
-        const question = state.survey.questions[state.currentQuestionIndex];
-        if (!question) {
-            // End of survey
+        const questions = Array.isArray(state.survey?.questions) ? state.survey.questions : [];
+        if (!questions.length) {
             showCompletionScreen();
             return;
+        }
+
+        if (state.currentQuestionIndex < 0) state.currentQuestionIndex = 0;
+        if (state.currentQuestionIndex >= questions.length) {
+            showCompletionScreen();
+            return;
+        }
+
+        let question = questions[state.currentQuestionIndex];
+
+        // 현재 질문이 visibility 조건을 만족하지 않으면 다음 보이는 질문으로 건너뛴다.
+        if (!isQuestionVisible(question, state.answers)) {
+            const nextIndex = findNextVisibleQuestionIndex(state.currentQuestionIndex + 1);
+            if (nextIndex >= questions.length) {
+                showCompletionScreen();
+                return;
+            }
+            state.currentQuestionIndex = nextIndex;
+            question = questions[state.currentQuestionIndex];
         }
 
         // ID 없으면 q_번호 형태로 보정
@@ -246,7 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function moveToNextQuestion() {
-        state.currentQuestionIndex++;
+        const nextIndex = findNextVisibleQuestionIndex(state.currentQuestionIndex + 1);
+        state.currentQuestionIndex = nextIndex;
         renderQuestion();
     }
 

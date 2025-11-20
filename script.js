@@ -149,6 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const aiGenerateBtn = document.getElementById('aiGenerateBtn');
     const aiTopicInput = document.getElementById('aiTopicInput');
     const aiCountButtons = document.querySelectorAll('.ai-count-btn');
+    const aiTopicPresetButtons = document.querySelectorAll('.ai-topic-btn');
     let aiSelectedQuestionCount = 5;
 
     const aiPreviewModal = document.getElementById('aiPreviewModal');
@@ -179,6 +180,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const maxSelValue = Number.isFinite(maxSelNum) && maxSelNum > 0 ? maxSelNum : '';
         const optionsGroupStyle = safeType === 'text' ? 'style="display:none;"' : '';
         const maxGroupStyle = safeType === 'checkbox' ? '' : 'style="display:none;"';
+        const visParentIndex = q.visibilityParentIndex != null ? q.visibilityParentIndex : '';
+        const visParentValue = q.visibilityParentValue != null ? q.visibilityParentValue : '';
         return `
             <div class="ai-q-header">
                 <div class="ai-q-header-left">
@@ -226,6 +229,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="form-group" style="display:flex;align-items:center;gap:8px;">
                     <input type="checkbox" class="ai-q-required" ${isRequired ? 'checked' : ''} />
                     <span>필수 질문</span>
+                </div>
+                <div class="form-group ai-q-visibility-group">
+                    <label>조건부 표시 (선택사항)</label>
+                    <div class="ai-visibility-row" style="display:flex;align-items:center;gap:8px;">
+                        <span>부모 질문 번호</span>
+                        <input type="number" class="form-control ai-q-parent-index" min="1" placeholder="예: 1" value="${visParentIndex !== '' ? visParentIndex : ''}">
+                    </div>
+                    <div class="ai-visibility-row" style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                        <span>부모 답변 값</span>
+                        <input type="text" class="form-control ai-q-parent-value" placeholder="예: 예" value="${escapeHtml(visParentValue)}">
+                    </div>
+                    <small class="ai-visibility-hint">예: Q1에서 '예' 선택 시에만 이 질문을 보여주려면 1 / 예 로 입력</small>
                 </div>
             </div>
         `;
@@ -488,6 +503,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 maxSelection
             });
         });
+
+        // 두 번째 패스에서 조건부 표시(visibility)를 parentIndex/parentValue 기반으로 설정
+        rows.forEach((row, index) => {
+            const parentIndexInput = row.querySelector('.ai-q-parent-index');
+            const parentValueInput = row.querySelector('.ai-q-parent-value');
+            if (!parentIndexInput || !parentValueInput) return;
+
+            const parentIdxNum = parseInt(parentIndexInput.value, 10);
+            const parentValue = parentValueInput.value.trim();
+
+            if (!Number.isFinite(parentIdxNum) || parentIdxNum < 1 || parentIdxNum > updatedQuestions.length || !parentValue) {
+                delete updatedQuestions[index].visibility;
+                return;
+            }
+
+            const parentQuestion = updatedQuestions[parentIdxNum - 1];
+            if (!parentQuestion || !parentQuestion.id) return;
+
+            updatedQuestions[index].visibility = {
+                parentId: parentQuestion.id,
+                value: parentValue
+            };
+        });
+
         return updatedQuestions;
     }
 
@@ -521,11 +560,28 @@ document.addEventListener("DOMContentLoaded", () => {
             wrapper.className = 'ai-preview-question';
             const safeType = ['radio', 'checkbox', 'text'].includes(q.type) ? q.type : 'text';
             const safeOptions = Array.isArray(q.options) ? q.options.map(o => String(o)) : [];
+
+            // visibility 정보를 UI에서 다루기 위해 parentIndex/parentValue로 변환
+            let visibilityParentIndex = '';
+            let visibilityParentValue = '';
+            if (q.visibility && q.visibility.parentId) {
+                const parentIdx = questions.findIndex((qq, idx) => {
+                    const baseId = qq.id || `q_${idx + 1}`;
+                    return baseId === q.visibility.parentId;
+                });
+                if (parentIdx >= 0) {
+                    visibilityParentIndex = parentIdx + 1;
+                    visibilityParentValue = q.visibility.value || '';
+                }
+            }
+
             wrapper.innerHTML = buildQuestionEditorHtml({
                 text: q.text,
                 type: safeType,
                 required: q.required,
-                options: safeOptions
+                options: safeOptions,
+                visibilityParentIndex,
+                visibilityParentValue
             }, index);
             aiPreviewQuestionContainer.appendChild(wrapper);
             setupQuestionOptionList(wrapper, safeOptions);
@@ -591,6 +647,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 aiSelectedQuestionCount = count === 10 ? 10 : 5;
                 aiCountButtons.forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
+            });
+        });
+    }
+
+    // AI 주제 프리셋 버튼: 클릭 시 주제 입력란에 채워 넣기
+    if (aiTopicPresetButtons && aiTopicPresetButtons.length) {
+        aiTopicPresetButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const topic = btn.dataset.topic || btn.textContent.trim();
+                if (aiTopicInput) {
+                    aiTopicInput.value = topic;
+                }
             });
         });
     }
@@ -1061,8 +1129,8 @@ function initEventListeners() {
             return;
         }
 
-        /* ✦ 삭제 버튼 (옵션/챕터) */
-        if (e.target.closest(".btn-icon") && e.target.textContent.includes("🗑️")) {
+        /* ✦ 삭제 버튼 (옵션/챕터) - AI 미리보기 삭제(ai-q-delete)는 여기서 제외 */
+        if (e.target.closest(".btn-icon") && !e.target.closest('.ai-q-delete') && e.target.textContent.includes("🗑️")) {
             const optionRow = e.target.closest(".answer-option");
             if (optionRow) {
                 optionRow.remove();
