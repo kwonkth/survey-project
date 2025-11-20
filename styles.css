@@ -957,11 +957,13 @@ textarea.form-control {
 }
 /* Dashboard stats + latest survey donut (index.html) */
 .dashboard-stats-grid {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;  /* ← 좌:통계 / 우:그래프 카드 */
     gap: 24px;
     width: 100%;
+    align-items: start;
 }
+
 
 .dashboard-stats-left {
     display: flex;
