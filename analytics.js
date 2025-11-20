@@ -36,6 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
       state.selectedSurveyId = sel.value || null;
       onSurveySelected(state.selectedSurveyId);
     });
+
+    if (menu) {
+      [btnJson, btnCsv, btnXls].forEach(btn => {
+        if (btn) {
+          btn.addEventListener('click', () => {
+            menu.classList.remove('open');
+          });
+        }
+      });
+    }
   }
 
   // Populate question selector for the selected survey (exclude name and text-only questions for doughnut)
@@ -62,11 +72,11 @@ document.addEventListener('DOMContentLoaded', () => {
       sel.appendChild(opt);
     });
     sel.onchange = () => {
-      renderOptionDoughnut(surveyId, sel.value);
+      renderOptionChart(surveyId, sel.value);
     };
     // default to first eligible
     sel.value = eligible[0].id;
-    renderOptionDoughnut(surveyId, sel.value);
+    renderOptionChart(surveyId, sel.value);
   }
 
   function renderDistributionHTML(q) {
@@ -167,6 +177,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnJson = document.getElementById('exportJsonBtn');
     const btnCsv = document.getElementById('exportCsvBtn');
     const btnXls = document.getElementById('exportXlsBtn');
+    const toggleBtn = document.getElementById('exportToggleBtn');
+    const menu = document.getElementById('exportMenu');
     const getData = () => state.latestStats || null;
 
     const ensureSelected = () => {
@@ -176,6 +188,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return true;
     };
+
+    if (toggleBtn && menu) {
+      toggleBtn.addEventListener('click', () => {
+        menu.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!menu.classList.contains('open')) return;
+        if (e.target === toggleBtn || toggleBtn.contains(e.target)) return;
+        if (menu.contains(e.target)) return;
+        menu.classList.remove('open');
+      });
+    }
 
     if (btnJson) btnJson.addEventListener('click', () => {
       if (!ensureSelected()) return;
@@ -271,7 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
     latestStats: null,
     selectedDropoutChart: null,
     doughnutChart: null,
-    responsesBySurvey: {}
+    responsesBySurvey: {},
+    optionChartType: 'doughnut'
   };
 
   init();
@@ -289,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
         onSurveySelected(preselectId);
       }
       wireExports();
+      wireChartTypeToggle();
     }).catch(() => {
       // leave empty state
     });
@@ -344,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  function renderOptionDoughnut(surveyId, questionId){
+  function renderOptionChart(surveyId, questionId){
     const ctx = document.getElementById('chart2');
     const optionEmpty = document.getElementById('optionEmpty');
     if (!ctx) return;
@@ -352,36 +379,154 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!labels.length) {
       if (state.doughnutChart) { state.doughnutChart.destroy(); state.doughnutChart = null; }
       if (optionEmpty) optionEmpty.style.display = 'block';
+      renderOptionStatsTable(surveyId, questionId, [], []);
       return;
     }
     if (optionEmpty) optionEmpty.style.display = 'none';
-    if (state.doughnutChart) state.doughnutChart.destroy();
+    if (state.doughnutChart) { state.doughnutChart.destroy(); state.doughnutChart = null; }
+
     const colors = labels.map((_, idx) => getIndexedColor(idx));
     const borders = colors;
+    const total = counts.reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
+    const chartType = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+
     setSelectedQuestionTitle(surveyId, questionId);
-    state.doughnutChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderColor: borders }] },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom' },
-          datalabels: {
-            color: '#333',
-            font: { weight: '700', size: 13 },
-            formatter: (value, context) => {
-              const dataArr = context.chart.data.datasets[0].data || [];
-              const total = dataArr.reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
-              if (!total) return '';
-              const pct = Math.round((value / total) * 100);
-              return pct ? `${pct}%` : '';
+    renderOptionStatsTable(surveyId, questionId, labels, counts);
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          onClick: (evt, legendItem, legend) => {
+            const index = legendItem.index;
+            const ci = legend.chart;
+            if (ci && typeof ci.toggleDataVisibility === 'function') {
+              ci.toggleDataVisibility(index);
+              ci.update();
             }
           }
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const label = context.label || '';
+              const raw = context.raw;
+              const value = typeof raw === 'number' ? raw : Number(raw) || 0;
+              if (!total) return `${label}: ${value}명`;
+              const pct = Math.round((value / total) * 100);
+              return `${label}: ${value}명 (${pct}%)`;
+            }
+          }
+        },
+        datalabels: {
+          color: '#333',
+          font: { weight: '700', size: 13 },
+          anchor: chartType === 'bar' ? 'end' : 'center',
+          align: chartType === 'bar' ? 'end' : 'center',
+          formatter: (value, context) => {
+            const dataArr = context.chart.data.datasets[0].data || [];
+            const totalLocal = dataArr.reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
+            if (!totalLocal) return '';
+            const pct = Math.round((value / totalLocal) * 100);
+            return pct ? `${pct}%` : '';
+          }
         }
-      },
+      }
+    };
+
+    if (chartType === 'bar') {
+      options.indexAxis = 'y';
+      options.scales = {
+        x: { beginAtZero: true, ticks: { precision: 0 } },
+        y: { ticks: { autoSkip: false } }
+      };
+    }
+
+    state.doughnutChart = new Chart(ctx, {
+      type: chartType,
+      data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderColor: borders }] },
+      options,
       plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
     });
+  }
+
+  function renderOptionStatsTable(surveyId, questionId, labels, counts) {
+    const container = document.getElementById('optionStatsTable');
+    if (!container) return;
+    const stats = state.latestStats;
+    if (!stats || stats.surveyId !== surveyId || !Array.isArray(stats.questions)) {
+      container.innerHTML = '';
+      return;
+    }
+    const q = stats.questions.find(x => String(x.id) === String(questionId));
+    if (!q || !Array.isArray(q.options) || !q.options.length) {
+      container.innerHTML = '<div style="font-size:0.9rem; color:#777;">표시할 데이터가 없습니다.</div>';
+      updateKpiForSelectedQuestion(surveyId, null);
+      return;
+    }
+
+    const rowsHtml = q.options.map(o => `
+      <tr>
+        <td>${escapeHTML(o.label)}</td>
+        <td style="text-align:right;">${o.count}</td>
+        <td style="text-align:right;">${o.percent}%</td>
+      </tr>`).join('');
+
+    container.innerHTML = `
+      <table class="option-table">
+        <thead>
+          <tr>
+            <th style="text-align:left;">선택지</th>
+            <th style="text-align:right;">응답 수(명)</th>
+            <th style="text-align:right;">비율(%)</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>`;
+
+    updateKpiForSelectedQuestion(surveyId, q);
+  }
+
+  function updateKpiForSelectedQuestion(surveyId, q) {
+    const stats = state.latestStats;
+    const surveyTotalEl = document.getElementById('kpiSurveyTotal');
+    const questionTotalEl = document.getElementById('kpiQuestionTotal');
+    const topEl = document.getElementById('kpiTopOption');
+
+    if (!surveyTotalEl && !questionTotalEl && !topEl) return;
+
+    if (!stats || stats.surveyId !== surveyId) {
+      if (surveyTotalEl) surveyTotalEl.textContent = '0건';
+      if (questionTotalEl) questionTotalEl.textContent = '0건';
+      if (topEl) topEl.textContent = '-';
+      return;
+    }
+
+    const totalResponses = stats.totalResponses || 0;
+    if (surveyTotalEl) surveyTotalEl.textContent = `${totalResponses}건`;
+
+    if (!q) {
+      if (questionTotalEl) questionTotalEl.textContent = '0건';
+      if (topEl) topEl.textContent = '-';
+      return;
+    }
+
+    const respondedCount = typeof q.respondedCount === 'number' ? q.respondedCount : 0;
+    if (questionTotalEl) questionTotalEl.textContent = `${respondedCount}건`;
+
+    let topLabel = '-';
+    if (Array.isArray(q.options) && q.options.length) {
+      const topOpt = q.options.reduce((best, curr) => {
+        if (!best) return curr;
+        return (curr.count || 0) > (best.count || 0) ? curr : best;
+      }, null);
+      if (topOpt && (topOpt.count || 0) > 0) {
+        topLabel = `${topOpt.label} – ${topOpt.percent}%`;
+      }
+    }
+    if (topEl) topEl.textContent = topLabel;
   }
 
   function setOptionEmpty(show){ const el = document.getElementById('optionEmpty'); if (el) el.style.display = show ? 'block' : 'none'; }
@@ -421,6 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (state.selectedDropoutChart) { state.selectedDropoutChart.destroy(); state.selectedDropoutChart = null; }
       if (state.doughnutChart) { state.doughnutChart.destroy(); state.doughnutChart = null; }
       setDropoutEmpty(true); setOptionEmpty(true);
+      updateKpiForSelectedQuestion(null, null);
       return;
     }
     // Load results for this survey from DB then render
@@ -433,12 +579,34 @@ document.addEventListener('DOMContentLoaded', () => {
       // latestStats에 원시 응답도 포함시켜 JSON 내보내기에서 실제 답변 내용을 볼 수 있도록 함
       state.latestStats = { surveyId, title: meta.title, rawResponses: responses, ...stats };
       populateQuestionSelect(surveyId);
+      updateKpiForSelectedQuestion(surveyId, null);
     }).catch(() => {
       // failure state: clear visuals
       if (state.selectedDropoutChart) { state.selectedDropoutChart.destroy(); state.selectedDropoutChart = null; }
       if (state.doughnutChart) { state.doughnutChart.destroy(); state.doughnutChart = null; }
       setDropoutEmpty(true); setOptionEmpty(true);
       state.latestStats = null;
+    });
+  }
+
+  function wireChartTypeToggle() {
+    const container = document.getElementById('overallDoughnutContainer');
+    if (!container) return;
+    const buttons = container.querySelectorAll('.chart-type-btn');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const type = btn.dataset.type === 'bar' ? 'bar' : 'doughnut';
+        if (state.optionChartType === type) return;
+        state.optionChartType = type;
+        buttons.forEach(b => b.classList.toggle('active', b === btn));
+        if (state.selectedSurveyId) {
+          const sel = document.getElementById('questionSelect');
+          const qId = sel && sel.value;
+          if (qId) {
+            renderOptionChart(state.selectedSurveyId, qId);
+          }
+        }
+      });
     });
   }
 

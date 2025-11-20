@@ -24,6 +24,23 @@
     <main class="dashboard" style="max-width: 1280px; margin: 0 auto; padding: 0 16px;">
       <h1>응답률 분석</h1>
 
+      <section class="dashboard-grid kpi-grid">
+        <div class="dashboard-card kpi-row">
+          <div class="kpi-item">
+            <div class="kpi-label">선택한 설문 총 응답 수</div>
+            <div id="kpiSurveyTotal" class="kpi-value">0건</div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-label">현재 문항 응답 수</div>
+            <div id="kpiQuestionTotal" class="kpi-value">0건</div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-label">최다 선택 항목</div>
+            <div id="kpiTopOption" class="kpi-value">-</div>
+          </div>
+        </div>
+      </section>
+
       <section class="dashboard-grid">
         <div class="dashboard-card">
           <h3>설문 및 문항 선택</h3>
@@ -33,19 +50,42 @@
             <label for="questionSelect" style="min-width:90px; margin-left:12px;">문항 선택</label>
             <select id="questionSelect" class="form-control" style="min-width:260px;"></select>
             <div style="margin-left:auto; display:flex; gap:0.5rem; flex-wrap:wrap;">
-              <button id="exportJsonBtn" class="btn-modal btn-modal-secondary">JSON 내보내기</button>
-              <button id="exportCsvBtn" class="btn-modal btn-modal-secondary">CSV 내보내기</button>
-              <button id="exportXlsBtn" class="btn-modal btn-modal-primary">Excel(CSV) 내보내기</button>
+              <div class="export-dropdown">
+                <button type="button" id="exportToggleBtn" class="btn-modal btn-modal-secondary export-toggle">
+                  📥 내보내기
+                </button>
+                <div id="exportMenu" class="export-menu">
+                  <button id="exportJsonBtn" class="btn-modal btn-modal-secondary">JSON 내보내기</button>
+                  <button id="exportCsvBtn" class="btn-modal btn-modal-secondary">CSV 내보내기</button>
+                  <button id="exportXlsBtn" class="btn-modal btn-modal-primary">Excel(CSV) 내보내기</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="dashboard-card" id="overallDoughnutContainer">
-          <h3>선택한 문항 – 선택지 분포 (도넛)</h3>
-          <p id="selectedQuestionTitle" style="margin:0 0 0.25rem 0; font-weight:600; color:#2c3e50;"></p>
-          <p id="selectedQuestionTotal" style="margin:0 0 0.75rem 0; font-size:0.9rem; color:#555;"></p>
-          <div style="height:300px"><canvas id="chart2"></canvas></div>
-          <div class="empty-state" id="optionEmpty" style="display:none; margin-top:0.5rem;">선택지 기반 문항을 선택하세요.</div>
+          <div class="chart-card-header">
+            <div>
+              <h3>선택한 문항 – 선택지 분포</h3>
+              <p id="selectedQuestionTitle" style="margin:0 0 0.25rem 0; font-weight:600; color:#2c3e50;"></p>
+              <p id="selectedQuestionTotal" style="margin:0 0 0.75rem 0; font-size:0.9rem; color:#555;"></p>
+            </div>
+            <div class="chart-type-toggle" aria-label="차트 유형 선택">
+              <button type="button" class="chart-type-btn active" data-type="doughnut">도넛</button>
+              <button type="button" class="chart-type-btn" data-type="bar">막대</button>
+            </div>
+          </div>
+          <div class="chart-and-table">
+            <div class="chart-area">
+              <div style="height:300px"><canvas id="chart2"></canvas></div>
+              <div class="empty-state" id="optionEmpty" style="display:none; margin-top:0.5rem;">선택지 기반 문항을 선택하세요.</div>
+            </div>
+            <div class="table-area">
+              <h4 class="table-title">상세 데이터</h4>
+              <div id="optionStatsTable" class="option-stats-table"></div>
+            </div>
+          </div>
         </div>
       </section>
       <div id="analyticsOutput" style="display:none;"></div>
@@ -122,10 +162,146 @@
       background: #3a5a9a;
     }
 
+    /* KPI row above charts */
+    .analytics-page .kpi-grid {
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .analytics-page .kpi-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .analytics-page .kpi-item {
+      flex: 1;
+      min-width: 180px;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+    .analytics-page .kpi-label {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 0.25rem;
+    }
+    .analytics-page .kpi-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    /* Chart header + chart type toggle */
+    .analytics-page .chart-card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .analytics-page .chart-type-toggle {
+      display: inline-flex;
+      border-radius: 999px;
+      background: #f3f4f6;
+      padding: 2px;
+    }
+    .analytics-page .chart-type-btn {
+      border: none;
+      background: transparent;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.85rem;
+      border-radius: 999px;
+      cursor: pointer;
+      color: #4b5563;
+    }
+    .analytics-page .chart-type-btn.active {
+      background: #4a6baf;
+      color: #fff;
+    }
+
+    /* Chart + table layout */
+    .analytics-page .chart-and-table {
+      display: grid;
+      grid-template-columns: 2fr 1.3fr;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .analytics-page .chart-area {
+      min-height: 300px;
+    }
+    .analytics-page .table-area {
+      border-left: 1px solid #e5e7eb;
+      padding-left: 1rem;
+    }
+    .analytics-page .table-title {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.95rem;
+      color: #374151;
+    }
+    .analytics-page .option-stats-table {
+      font-size: 0.85rem;
+    }
+    .analytics-page .option-stats-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .analytics-page .option-stats-table th,
+    .analytics-page .option-stats-table td {
+      padding: 0.35rem 0.25rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .analytics-page .option-stats-table th {
+      font-weight: 600;
+      color: #4b5563;
+    }
+
+    /* Export dropdown */
+    .analytics-page .export-dropdown {
+      position: relative;
+    }
+    .analytics-page .export-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .analytics-page .export-menu {
+      position: absolute;
+      right: 0;
+      top: 110%;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+      padding: 0.4rem;
+      display: none;
+      flex-direction: column;
+      gap: 0.25rem;
+      min-width: 180px;
+      z-index: 10;
+    }
+    .analytics-page .export-menu.open {
+      display: flex;
+    }
+    .analytics-page .export-menu .btn-modal {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
     /* Make charts area breathe nicely */
     .analytics-page #dropoffContainer h3,
     .analytics-page #perSurveyContainer h3 {
       margin-bottom: 0.75rem;
+    }
+
+    @media (max-width: 900px) {
+      .analytics-page .chart-and-table {
+        grid-template-columns: 1fr;
+      }
+      .analytics-page .table-area {
+        border-left: none;
+        border-top: 1px solid #e5e7eb;
+        padding-left: 0;
+        padding-top: 0.75rem;
+      }
     }
   </style>
 </body>
