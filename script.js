@@ -12,8 +12,10 @@ let surveyModal, completionModal,
     addChapterBtn, questionBlocksContainer;
 
 let lastCreatedSurveyId = '';
-let currentSurveyId = null;          // 공유 링크 등에 사용하는 공개 survey_id
-let currentSurveyApiId = null;       // GET/PATCH에 사용하는 API 경로용 id
+let currentSurveyId = null;             // 공유 링크 등에 사용하는 공개 survey_id
+let currentSurveyApiId = null;          // GET/PATCH에 사용하는 API 경로용 id
+let currentSurveyStatus = 'draft';      // 기존 설문의 상태 (PATCH 시 그대로 유지)
+let currentSurveyCreatedAt = null;      // 기존 설문의 생성일 (PATCH 시 그대로 유지)
 let aiGeneratedSurvey = null;
 let isEditingExistingSurvey = false;
 
@@ -645,11 +647,13 @@ document.addEventListener("DOMContentLoaded", () => {
             // 기존 설문 편집 모드라면, 새 설문을 만들지 말고 기존 설문을 업데이트(PATCH)
             if (isEditingExistingSurvey && currentSurveyApiId) {
                 await API.updateSurvey(currentSurveyApiId, {
+                    survey_id: currentSurveyId,
                     title: aiGeneratedSurvey.title || 'AI 생성 설문',
                     description: aiGeneratedSurvey.description || '',
                     questions: JSON.stringify(aiGeneratedSurvey.questions || []),
                     story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
                     status: 'draft',
+                    created_at: currentSurveyCreatedAt || now,
                     updated_at: now
                 });
 
@@ -703,10 +707,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (isEditingExistingSurvey && currentSurveyApiId) {
                     // 설문관리에서 넘어온 기존 설문 편집 모드: 현재 상태를 유지한 채 내용만 PATCH
                     await API.updateSurvey(currentSurveyApiId, {
+                        survey_id: currentSurveyId,
                         title: aiGeneratedSurvey.title || 'AI 생성 설문',
                         description: aiGeneratedSurvey.description || '',
                         questions: JSON.stringify(aiGeneratedSurvey.questions || []),
                         story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
+                        status: currentSurveyStatus || 'draft',
+                        created_at: currentSurveyCreatedAt || now,
                         updated_at: now
                     });
 
@@ -931,6 +938,8 @@ function importSurveysFromJSON(json) {
 
             currentSurveyId = surveyPublicId;
             lastCreatedSurveyId = surveyPublicId;
+            currentSurveyStatus = found.status || 'draft';
+            currentSurveyCreatedAt = found.created_at || found.createdAt || null;
             isEditingExistingSurvey = true;
 
             aiGeneratedSurvey = {
