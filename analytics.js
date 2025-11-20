@@ -459,10 +459,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (optionEmpty) optionEmpty.style.display = 'none';
     if (state.doughnutChart) { state.doughnutChart.destroy(); state.doughnutChart = null; }
 
-    const colors = labels.map((_, idx) => getIndexedColor(idx));
-    const borders = colors;
     const total = counts.reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
+    const maxCount = counts.reduce((m, v) => {
+      const n = typeof v === 'number' ? v : Number(v) || 0;
+      return n > m ? n : m;
+    }, 0);
     const chartType = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+
+    const colors = labels.map((_, idx) => {
+      const raw = counts[idx];
+      const n = typeof raw === 'number' ? raw : Number(raw) || 0;
+      if (chartType === 'bar' && n === 0) return '#d1d5db';
+      return getIndexedColor(idx);
+    });
+    const borders = colors.map(c => (chartType === 'bar' && c === '#d1d5db') ? '#9ca3af' : c);
 
     setSelectedQuestionTitle(surveyId, questionId);
     renderOptionStatsTable(surveyId, questionId, labels, counts);
@@ -472,6 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
       maintainAspectRatio: false,
       plugins: {
         legend: {
+          display: chartType === 'bar' ? false : true,
           position: 'bottom',
           onClick: (evt, legendItem, legend) => {
             const index = legendItem.index;
@@ -502,9 +513,12 @@ document.addEventListener('DOMContentLoaded', () => {
           formatter: (value, context) => {
             const dataArr = context.chart.data.datasets[0].data || [];
             const totalLocal = dataArr.reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
-            if (!totalLocal) return '';
-            const pct = Math.round((value / totalLocal) * 100);
-            return pct ? `${pct}%` : '';
+            const valNum = typeof value === 'number' ? value : Number(value) || 0;
+            if (!totalLocal) {
+              return `${valNum}명 (0%)`;
+            }
+            const pct = Math.round((valNum / totalLocal) * 100);
+            return `${valNum}명 (${pct}%)`;
           }
         }
       }
@@ -524,11 +538,25 @@ document.addEventListener('DOMContentLoaded', () => {
           ticks: { precision: 0 }
         }
       };
+      if (maxCount > 0 && options.scales && options.scales.y) {
+        const padded = Math.ceil(maxCount * 1.2);
+        options.scales.y.suggestedMax = padded;
+      }
+    }
+
+    const dataset = {
+      data: counts,
+      backgroundColor: colors,
+      borderColor: borders
+    };
+    if (chartType === 'bar') {
+      dataset.categoryPercentage = 0.6;
+      dataset.barPercentage = 0.7;
     }
 
     state.doughnutChart = new Chart(ctx, {
       type: chartType,
-      data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderColor: borders }] },
+      data: { labels, datasets: [dataset] },
       options,
       plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
     });
@@ -549,12 +577,15 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const rowsHtml = q.options.map(o => `
+    const rowsHtml = q.options.map((o, idx) => {
+      const color = getIndexedColor(idx);
+      return `
       <tr>
-        <td>${escapeHTML(o.label)}</td>
+        <td><span class="option-color-dot" style="background-color:${color};"></span>${escapeHTML(o.label)}</td>
         <td style="text-align:right;">${o.count}</td>
         <td style="text-align:right;">${o.percent}%</td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
 
     container.innerHTML = `
       <table class="option-table">

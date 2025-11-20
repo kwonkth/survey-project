@@ -89,6 +89,7 @@
             <div class="chart-area">
               <div class="chart-canvas-wrap"><canvas id="chart2"></canvas></div>
               <div class="empty-state" id="optionEmpty" style="display:none; margin-top:0.5rem;">선택지 기반 문항을 선택하세요.</div>
+              <p class="chart-zero-note">회색 막대는 응답 0건(데이터 없음)을 의미합니다.</p>
             </div>
             <div class="table-area">
               <h4 class="table-title">상세 데이터</h4>
@@ -282,6 +283,21 @@
     .analytics-page .option-stats-table th {
       font-weight: 600;
       color: #4b5563;
+    }
+
+    .analytics-page .chart-zero-note {
+      margin-top: 0.35rem;
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    .analytics-page .option-color-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-right: 0.35rem;
+      vertical-align: middle;
     }
 
     /* Export dropdown */
