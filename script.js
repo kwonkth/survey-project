@@ -39,10 +39,12 @@ const API = {
         }
         return res.json();
     },
-    async updateSurvey(id, payload) {
-        console.log('[API.updateSurvey] PATCH /api/surveys/', id, 'payload =', payload);
-        const res = await fetch(`/api/surveys/${encodeURIComponent(id)}`, {
-            method: 'PATCH',
+    // 설문 내용(제목/질문 등)을 수정할 때는 POST /api/surveys 의 upsert 기능을 사용한다.
+    // id 파라미터는 더 이상 사용하지 않고, payload.survey_id를 기준으로 upsert 된다.
+    async updateSurvey(_id, payload) {
+        console.log('[API.updateSurvey] POST /api/surveys (upsert) payload =', payload);
+        const res = await fetch('/api/surveys', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -54,7 +56,7 @@ const API = {
         }
         console.log('[API.updateSurvey] response', res.status, json);
         if (!res.ok) {
-            throw new Error(`PATCH /api/surveys/${id} ${res.status}`);
+            throw new Error(`POST /api/surveys (upsert) ${res.status}`);
         }
         return json;
     }
