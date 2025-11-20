@@ -969,6 +969,9 @@ textarea.form-control {
     display: flex;
     flex-direction: column;
     gap: 24px;
+    width: 100%;
+    max-width: none; /* ← 제한 제거 */
+    margin: 0;
 }
 
 .latest-survey-card {
