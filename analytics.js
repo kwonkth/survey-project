@@ -459,16 +459,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (optionEmpty) optionEmpty.style.display = 'none';
     if (state.doughnutChart) { state.doughnutChart.destroy(); state.doughnutChart = null; }
 
-    const total = counts.reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
-    const maxCount = counts.reduce((m, v) => {
-      const n = typeof v === 'number' ? v : Number(v) || 0;
-      return n > m ? n : m;
-    }, 0);
     const chartType = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+    const rawCounts = counts.map(v => (typeof v === 'number' ? v : Number(v) || 0));
+    const total = rawCounts.reduce((sum, v) => sum + v, 0);
+    const maxCount = rawCounts.reduce((m, v) => (v > m ? v : m), 0);
 
     const colors = labels.map((_, idx) => {
-      const raw = counts[idx];
-      const n = typeof raw === 'number' ? raw : Number(raw) || 0;
+      const n = rawCounts[idx] || 0;
       if (chartType === 'bar' && n === 0) return '#d1d5db';
       return getIndexedColor(idx);
     });
@@ -497,8 +494,8 @@ document.addEventListener('DOMContentLoaded', () => {
           callbacks: {
             label: (context) => {
               const label = context.label || '';
-              const raw = context.raw;
-              const value = typeof raw === 'number' ? raw : Number(raw) || 0;
+              const idx = context.dataIndex;
+              const value = rawCounts[idx] || 0;
               if (!total) return `${label}: ${value}명`;
               const pct = Math.round((value / total) * 100);
               return `${label}: ${value}명 (${pct}%)`;
@@ -511,13 +508,12 @@ document.addEventListener('DOMContentLoaded', () => {
           anchor: chartType === 'bar' ? 'end' : 'center',
           align: chartType === 'bar' ? 'end' : 'center',
           formatter: (value, context) => {
-            const dataArr = context.chart.data.datasets[0].data || [];
-            const totalLocal = dataArr.reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
-            const valNum = typeof value === 'number' ? value : Number(value) || 0;
-            if (!totalLocal) {
+            const idx = context.dataIndex;
+            const valNum = rawCounts[idx] || 0;
+            if (!total) {
               return `${valNum}명 (0%)`;
             }
-            const pct = Math.round((valNum / totalLocal) * 100);
+            const pct = Math.round((valNum / total) * 100);
             return `${valNum}명 (${pct}%)`;
           }
         }
@@ -545,7 +541,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const dataset = {
-      data: counts,
+      data: chartType === 'bar'
+        ? rawCounts.map(v => (v === 0 ? 1 : v))
+        : rawCounts,
       backgroundColor: colors,
       borderColor: borders
     };
