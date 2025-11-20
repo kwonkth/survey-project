@@ -40,15 +40,23 @@ const API = {
         return res.json();
     },
     async updateSurvey(id, payload) {
+        console.log('[API.updateSurvey] PATCH /api/surveys/', id, 'payload =', payload);
         const res = await fetch(`/api/surveys/${encodeURIComponent(id)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
+        let json = null;
+        try {
+            json = await res.json();
+        } catch (_) {
+            json = null;
+        }
+        console.log('[API.updateSurvey] response', res.status, json);
         if (!res.ok) {
             throw new Error(`PATCH /api/surveys/${id} ${res.status}`);
         }
-        return res.json();
+        return json;
     }
 };
 
