@@ -960,7 +960,7 @@ textarea.form-control {
     display: grid;
     grid-template-columns: 1fr 1.2fr;
     gap: 40px;
-    align-items: center;
+    align-items: flex-start;
     width: 100%;
 }
 
@@ -974,16 +974,16 @@ textarea.form-control {
     background: #fff;
     border-radius: 16px;
     padding: 24px;
-    height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
 .latest-survey-donut-wrap {
     width: 100%;
     height: 260px;
+    margin-top: 16px;
 }
 
 /* Responsive Design */
