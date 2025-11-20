@@ -305,6 +305,33 @@ body {
     margin-top: 1.5rem;
 }
 
+/* AI topic preset buttons (example topics) */
+.ai-topic-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ai-topic-btn {
+    flex: 0 0 auto;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background-color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: #444;
+    transition: all 0.2s ease;
+}
+
+.ai-topic-btn:hover {
+    background-color: #f5f5ff;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.12);
+}
+
 /* AI question count buttons */
 .ai-count-buttons {
     display: flex;
