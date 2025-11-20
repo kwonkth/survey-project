@@ -126,7 +126,8 @@ body {
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* 왼쪽: 설문 관리 1, 오른쪽: 설문 통계 2 (합쳐서 3 비율) */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
     gap: 1.5rem;
     margin-top: 2rem;
 }
