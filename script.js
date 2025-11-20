@@ -1469,6 +1469,7 @@ function renderLatestSurveyDonutCard(latestMeta, responses) {
                 borderWidth: 0
             }]
         },
+        plugins: [latestDonutCenterPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -1485,6 +1486,9 @@ function renderLatestSurveyDonutCard(latestMeta, responses) {
                             return `${label}: ${v}명 (${pct}%)`;
                         }
                     }
+                },
+                latestDonutCenter: {
+                    text: total ? `${total}명` : '0명'
                 }
             }
         }
@@ -1548,6 +1552,7 @@ async function renderMainDashboard() {
         });
 
         let totalResponses = 0;
+        let totalQuestionsAll = 0;
         const enriched = [];
         const responsesById = {};
 
@@ -1564,11 +1569,11 @@ async function renderMainDashboard() {
             };
             enriched.push(info);
             totalResponses += responses.length;
+            totalQuestionsAll += Array.isArray(s.questions) ? s.questions.length : 0;
         }
 
-        const withResponses = enriched.filter(s => s.responsesCount > 0);
-        const avgCompletion = withResponses.length
-            ? Math.round(withResponses.reduce((sum, s) => sum + (s.completionRate || 0), 0) / withResponses.length)
+        const avgQuestionCount = metaSurveys.length
+            ? Math.round(totalQuestionsAll / metaSurveys.length)
             : 0;
 
         const latest = enriched
@@ -1590,21 +1595,21 @@ async function renderMainDashboard() {
                             <span class="stat-label">총 응답</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-value">${avgCompletion}%</span>
-                            <span class="stat-label">평균 완료율</span>
+                            <span class="stat-value">${avgQuestionCount}</span>
+                            <span class="stat-label">평균 질문 개수</span>
                         </div>
                     </div>
                     <div class="latest-survey-card">
                         <div class="latest-survey-header">
                             <div class="latest-survey-title">최근 설문</div>
                         </div>
-                        <div class="latest-survey-donut-wrap">
-                            <canvas id="latestSurveyDonut"></canvas>
-                        </div>
                         <div class="latest-survey-meta">
                             <div id="latestSurveyTitle">설문 제목: -</div>
                             <div id="latestSurveyQuestion">1번 문항: -</div>
                             <div id="latestSurveyCounts">응답 총합: 0건</div>
+                        </div>
+                        <div class="latest-survey-donut-wrap">
+                            <canvas id="latestSurveyDonut"></canvas>
                         </div>
                     </div>
                 </div>
