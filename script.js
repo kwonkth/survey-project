@@ -12,7 +12,8 @@ let surveyModal, completionModal,
     addChapterBtn, questionBlocksContainer;
 
 let lastCreatedSurveyId = '';
-let currentSurveyId = null;
+let currentSurveyId = null;          // 공유 링크 등에 사용하는 공개 survey_id
+let currentSurveyApiId = null;       // GET/PATCH에 사용하는 API 경로용 id
 let aiGeneratedSurvey = null;
 let isEditingExistingSurvey = false;
 
@@ -48,6 +49,19 @@ const API = {
         return res.json();
     }
 };
+
+// 설문관리에서 넘어온 편집 세션이 끝났을 때 URL의 surveyId 파라미터를 제거하여
+// 새로고침 시 자동으로 미리보기가 다시 열리지 않도록 처리한다.
+function clearSurveyIdQueryParam() {
+    try {
+        const url = new URL(window.location.href);
+        if (!url.searchParams.has('surveyId')) return;
+        url.searchParams.delete('surveyId');
+        window.history.replaceState({}, '', url.toString());
+    } catch (e) {
+        console.warn('surveyId 쿼리 파라미터 제거 중 오류', e);
+    }
+}
 
 /* =======================================================
    초기화 – DOMContentLoaded
@@ -626,8 +640,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const now = new Date().toISOString();
 
             // 기존 설문 편집 모드라면, 새 설문을 만들지 말고 기존 설문을 업데이트(PATCH)
-            if (isEditingExistingSurvey && currentSurveyId) {
-                await API.updateSurvey(currentSurveyId, {
+            if (isEditingExistingSurvey && currentSurveyApiId) {
+                await API.updateSurvey(currentSurveyApiId, {
                     title: aiGeneratedSurvey.title || 'AI 생성 설문',
                     description: aiGeneratedSurvey.description || '',
                     questions: JSON.stringify(aiGeneratedSurvey.questions || []),
@@ -683,9 +697,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const now = new Date().toISOString();
                 let surveyId = currentSurveyId;
 
-                if (isEditingExistingSurvey && currentSurveyId) {
+                if (isEditingExistingSurvey && currentSurveyApiId) {
                     // 기존 설문 편집 모드: 기존 설문을 활성 상태로 업데이트
-                    await API.updateSurvey(currentSurveyId, {
+                    await API.updateSurvey(currentSurveyApiId, {
                         title: aiGeneratedSurvey.title || 'AI 생성 설문',
                         description: aiGeneratedSurvey.description || '',
                         questions: JSON.stringify(aiGeneratedSurvey.questions || []),
@@ -693,6 +707,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         status: 'active',
                         updated_at: now
                     });
+
+                    // 기존 설문 편집 완료 후에는 URL에서 surveyId를 제거하여
+                    // 새로고침 시 자동으로 미리보기가 열리지 않도록 한다.
+                    clearSurveyIdQueryParam();
+                    isEditingExistingSurvey = false;
+                    currentSurveyApiId = null;
                 } else {
                     // 새 설문 생성 모드: 신규 ID로 생성
                     surveyId = `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -739,7 +759,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (aiPreviewCancelBtn) {
         aiPreviewCancelBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            await saveAiSurveyDraftAndClose();
+
+            const shouldSave = window.confirm('변경 내용을 임시 저장하시겠습니까?\n\n[확인]: 임시 저장 후 닫기\n[취소]: 저장하지 않고 닫기');
+            if (shouldSave) {
+                await saveAiSurveyDraftAndClose();
+            } else {
+                closeAiPreviewModal();
+            }
+
+            // 편집 세션 종료 시에는 URL의 surveyId를 제거하여 새로고침 시 자동 열림을 방지
+            clearSurveyIdQueryParam();
+            isEditingExistingSurvey = false;
+            currentSurveyApiId = null;
         });
     }
 
@@ -747,7 +778,17 @@ document.addEventListener("DOMContentLoaded", () => {
         aiPreviewClose.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            await saveAiSurveyDraftAndClose();
+
+            const shouldSave = window.confirm('변경 내용을 임시 저장하시겠습니까?\n\n[확인]: 임시 저장 후 닫기\n[취소]: 저장하지 않고 닫기');
+            if (shouldSave) {
+                await saveAiSurveyDraftAndClose();
+            } else {
+                closeAiPreviewModal();
+            }
+
+            clearSurveyIdQueryParam();
+            isEditingExistingSurvey = false;
+            currentSurveyApiId = null;
         });
     }
 
@@ -861,6 +902,9 @@ function importSurveysFromJSON(json) {
             const editSurveyId = params.get('surveyId');
             if (!editSurveyId || !aiPreviewModal) return;
 
+            // GET에 사용한 같은 id를 PATCH에도 재사용하기 위해 API용 id로 보관
+            currentSurveyApiId = editSurveyId;
+
             const found = await API.getSurvey(editSurveyId);
             if (!found || !(found.survey_id || found.id)) return;
 
@@ -870,10 +914,10 @@ function importSurveysFromJSON(json) {
             }
 
             const baseQuestions = Array.isArray(questions) ? questions : [];
-            const surveyId = found.survey_id || found.id;
+            const surveyPublicId = found.survey_id || found.id;
 
-            currentSurveyId = surveyId;
-            lastCreatedSurveyId = surveyId;
+            currentSurveyId = surveyPublicId;
+            lastCreatedSurveyId = surveyPublicId;
             isEditingExistingSurvey = true;
 
             aiGeneratedSurvey = {
