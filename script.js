@@ -14,6 +14,7 @@ let surveyModal, completionModal,
 let lastCreatedSurveyId = '';
 let currentSurveyId = null;
 let aiGeneratedSurvey = null;
+let isEditingExistingSurvey = false;
 
 // Main page API helper for surveys (Cloudflare Worker backend)
 const API = {
@@ -32,6 +33,17 @@ const API = {
         const res = await fetch(`/api/surveys/${encodeURIComponent(id)}`, { method: 'GET' });
         if (!res.ok) {
             throw new Error(`GET /api/surveys/${id} ${res.status}`);
+        }
+        return res.json();
+    },
+    async updateSurvey(id, payload) {
+        const res = await fetch(`/api/surveys/${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            throw new Error(`PATCH /api/surveys/${id} ${res.status}`);
         }
         return res.json();
     }
@@ -277,6 +289,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
             aiPreviewLivePanel.appendChild(qEl);
         });
+    }
+
+    // 이름 질문(q_name 또는 '이름'이 포함된 질문)이 여러 개일 경우,
+    // analytics/Excel용 q_name 하나만 남기고 나머지 이름형 질문은 제거한다.
+    function dedupeNameQuestions(questions) {
+        if (!Array.isArray(questions)) return [];
+
+        const isNameLikeLocal = (q) => {
+            if (!q) return false;
+            const id = String(q.id || '').toLowerCase();
+            const t = String(q.text || '');
+            return id === 'q_name' || /이름/.test(t);
+        };
+
+        const nameIdxs = [];
+        questions.forEach((q, idx) => {
+            if (isNameLikeLocal(q)) nameIdxs.push(idx);
+        });
+
+        if (nameIdxs.length <= 1) return questions;
+
+        const qNameIdx = nameIdxs.find(idx => String(questions[idx].id || '').toLowerCase() === 'q_name');
+        const keepIdx = (qNameIdx !== undefined) ? qNameIdx : nameIdxs[0];
+
+        return questions
+            .map((q, idx) => {
+                if (idx === keepIdx && isNameLikeLocal(q)) {
+                    return { ...q, id: 'q_name', type: 'text', options: [], required: false };
+                }
+                if (idx !== keepIdx && isNameLikeLocal(q)) {
+                    return null; // 나머지 이름형 질문 제거
+                }
+                return q;
+            })
+            .filter(Boolean);
     }
 
     function setAiPreviewMode(mode) {
@@ -550,7 +597,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 const data = await res.json();
-                aiGeneratedSurvey = data;
+                aiGeneratedSurvey = {
+                    ...data,
+                    questions: dedupeNameQuestions(data.questions)
+                };
                 closeAiModal();
                 openAiPreviewModal();
             } catch (e) {
@@ -573,24 +623,40 @@ document.addEventListener("DOMContentLoaded", () => {
         aiGeneratedSurvey.questions = updatedQuestions;
 
         try {
-            const surveyId = `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
             const now = new Date().toISOString();
 
-            currentSurveyId = surveyId;
-            lastCreatedSurveyId = surveyId;
+            // 기존 설문 편집 모드라면, 새 설문을 만들지 말고 기존 설문을 업데이트(PATCH)
+            if (isEditingExistingSurvey && currentSurveyId) {
+                await API.updateSurvey(currentSurveyId, {
+                    title: aiGeneratedSurvey.title || 'AI 생성 설문',
+                    description: aiGeneratedSurvey.description || '',
+                    questions: JSON.stringify(aiGeneratedSurvey.questions || []),
+                    story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
+                    status: 'draft',
+                    updated_at: now
+                });
 
-            await API.postSurvey({
-                survey_id: surveyId,
-                title: aiGeneratedSurvey.title || 'AI 생성 설문',
-                description: aiGeneratedSurvey.description || '',
-                questions: JSON.stringify(aiGeneratedSurvey.questions || []),
-                story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
-                status: 'draft',
-                created_at: now,
-                updated_at: now
-            });
+                alert('수정 중인 설문이 임시 저장되었습니다.');
+            } else {
+                // 새로 만든 설문인 경우에는 기존처럼 신규 ID로 생성
+                const surveyId = `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-            alert('작성 중인 설문이 임시 저장되었습니다.');
+                currentSurveyId = surveyId;
+                lastCreatedSurveyId = surveyId;
+
+                await API.postSurvey({
+                    survey_id: surveyId,
+                    title: aiGeneratedSurvey.title || 'AI 생성 설문',
+                    description: aiGeneratedSurvey.description || '',
+                    questions: JSON.stringify(aiGeneratedSurvey.questions || []),
+                    story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
+                    status: 'draft',
+                    created_at: now,
+                    updated_at: now
+                });
+
+                alert('작성 중인 설문이 임시 저장되었습니다.');
+            }
         } catch (err) {
             console.error(err);
             alert('임시 저장 중 오류가 발생했습니다.');
@@ -614,25 +680,40 @@ document.addEventListener("DOMContentLoaded", () => {
             aiPreviewSaveBtn.textContent = '저장 중...';
 
             try {
-                const surveyId = `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
                 const now = new Date().toISOString();
+                let surveyId = currentSurveyId;
 
-                currentSurveyId = surveyId;
-                lastCreatedSurveyId = surveyId;
+                if (isEditingExistingSurvey && currentSurveyId) {
+                    // 기존 설문 편집 모드: 기존 설문을 활성 상태로 업데이트
+                    await API.updateSurvey(currentSurveyId, {
+                        title: aiGeneratedSurvey.title || 'AI 생성 설문',
+                        description: aiGeneratedSurvey.description || '',
+                        questions: JSON.stringify(aiGeneratedSurvey.questions || []),
+                        story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
+                        status: 'active',
+                        updated_at: now
+                    });
+                } else {
+                    // 새 설문 생성 모드: 신규 ID로 생성
+                    surveyId = `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+                    currentSurveyId = surveyId;
+                    lastCreatedSurveyId = surveyId;
 
-                await API.postSurvey({
-                    survey_id: surveyId,
-                    title: aiGeneratedSurvey.title || 'AI 생성 설문',
-                    description: aiGeneratedSurvey.description || '',
-                    questions: JSON.stringify(aiGeneratedSurvey.questions || []),
-                    story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
-                    status: 'active',
-                    created_at: now,
-                    updated_at: now
-                });
+                    await API.postSurvey({
+                        survey_id: surveyId,
+                        title: aiGeneratedSurvey.title || 'AI 생성 설문',
+                        description: aiGeneratedSurvey.description || '',
+                        questions: JSON.stringify(aiGeneratedSurvey.questions || []),
+                        story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
+                        status: 'active',
+                        created_at: now,
+                        updated_at: now
+                    });
+                }
 
-                // 링크 생성 및 완료 모달 표시
-                const surveyUrl = `${window.location.origin}/survey.html?surveyId=${encodeURIComponent(surveyId)}`;
+                // 링크 생성 및 완료 모달 표시 (편집 모드에서는 기존 ID로 링크 생성)
+                const finalSurveyId = surveyId || currentSurveyId;
+                const surveyUrl = `${window.location.origin}/survey.html?surveyId=${encodeURIComponent(finalSurveyId)}`;
                 const shareInput = document.getElementById('shareLinkInput');
                 const qrImg = document.getElementById('qrCodeImage');
                 if (shareInput) shareInput.value = surveyUrl;
@@ -788,10 +869,17 @@ function importSurveysFromJSON(json) {
                 try { questions = JSON.parse(questions); } catch { questions = []; }
             }
 
+            const baseQuestions = Array.isArray(questions) ? questions : [];
+            const surveyId = found.survey_id || found.id;
+
+            currentSurveyId = surveyId;
+            lastCreatedSurveyId = surveyId;
+            isEditingExistingSurvey = true;
+
             aiGeneratedSurvey = {
                 title: found.title || '제목 없음',
                 description: found.description || '',
-                questions: Array.isArray(questions) ? questions : []
+                questions: dedupeNameQuestions(baseQuestions)
             };
 
             openAiPreviewModal();
