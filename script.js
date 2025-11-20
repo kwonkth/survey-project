@@ -538,6 +538,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         renumberPreviewQuestions();
         setAiPreviewMode('edit');
+        if (aiPreviewSaveBtn) {
+            aiPreviewSaveBtn.textContent = isEditingExistingSurvey ? '저장' : '설문 시작';
+        }
         aiPreviewModal.style.display = 'block';
         document.body.style.overflow = 'hidden';
     }
@@ -698,21 +701,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 let surveyId = currentSurveyId;
 
                 if (isEditingExistingSurvey && currentSurveyApiId) {
-                    // 기존 설문 편집 모드: 기존 설문을 활성 상태로 업데이트
+                    // 설문관리에서 넘어온 기존 설문 편집 모드: 현재 상태를 유지한 채 내용만 PATCH
                     await API.updateSurvey(currentSurveyApiId, {
                         title: aiGeneratedSurvey.title || 'AI 생성 설문',
                         description: aiGeneratedSurvey.description || '',
                         questions: JSON.stringify(aiGeneratedSurvey.questions || []),
                         story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
-                        status: 'active',
                         updated_at: now
                     });
 
-                    // 기존 설문 편집 완료 후에는 URL에서 surveyId를 제거하여
-                    // 새로고침 시 자동으로 미리보기가 열리지 않도록 한다.
+                    alert('설문이 저장되었습니다.');
+                    closeAiPreviewModal();
                     clearSurveyIdQueryParam();
                     isEditingExistingSurvey = false;
                     currentSurveyApiId = null;
+                    return;
                 } else {
                     // 새 설문 생성 모드: 신규 ID로 생성
                     surveyId = `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -760,17 +763,22 @@ document.addEventListener("DOMContentLoaded", () => {
         aiPreviewCancelBtn.addEventListener('click', async (e) => {
             e.preventDefault();
 
+            // 설문관리에서 넘어온 편집 모드일 때는 임시저장을 하지 않고 그냥 닫기만 한다.
+            if (isEditingExistingSurvey) {
+                closeAiPreviewModal();
+                clearSurveyIdQueryParam();
+                isEditingExistingSurvey = false;
+                currentSurveyApiId = null;
+                return;
+            }
+
+            // 새로 생성 중인 설문에 대해서만 임시저장 여부를 물어본다.
             const shouldSave = window.confirm('변경 내용을 임시 저장하시겠습니까?\n\n[확인]: 임시 저장 후 닫기\n[취소]: 저장하지 않고 닫기');
             if (shouldSave) {
                 await saveAiSurveyDraftAndClose();
             } else {
                 closeAiPreviewModal();
             }
-
-            // 편집 세션 종료 시에는 URL의 surveyId를 제거하여 새로고침 시 자동 열림을 방지
-            clearSurveyIdQueryParam();
-            isEditingExistingSurvey = false;
-            currentSurveyApiId = null;
         });
     }
 
@@ -779,16 +787,21 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             e.stopPropagation();
 
+            // 설문관리에서 넘어온 편집 모드일 때는 임시저장을 하지 않고 그냥 닫기만 한다.
+            if (isEditingExistingSurvey) {
+                closeAiPreviewModal();
+                clearSurveyIdQueryParam();
+                isEditingExistingSurvey = false;
+                currentSurveyApiId = null;
+                return;
+            }
+
             const shouldSave = window.confirm('변경 내용을 임시 저장하시겠습니까?\n\n[확인]: 임시 저장 후 닫기\n[취소]: 저장하지 않고 닫기');
             if (shouldSave) {
                 await saveAiSurveyDraftAndClose();
             } else {
                 closeAiPreviewModal();
             }
-
-            clearSurveyIdQueryParam();
-            isEditingExistingSurvey = false;
-            currentSurveyApiId = null;
         });
     }
 
