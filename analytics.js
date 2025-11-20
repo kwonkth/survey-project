@@ -36,16 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
       state.selectedSurveyId = sel.value || null;
       onSurveySelected(state.selectedSurveyId);
     });
-
-    if (menu) {
-      [btnJson, btnCsv, btnXls].forEach(btn => {
-        if (btn) {
-          btn.addEventListener('click', () => {
-            menu.classList.remove('open');
-          });
-        }
-      });
-    }
   }
 
   // Populate question selector for the selected survey (exclude name and text-only questions for doughnut)
@@ -297,7 +287,8 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedDropoutChart: null,
     doughnutChart: null,
     responsesBySurvey: {},
-    optionChartType: 'doughnut'
+    optionChartType: 'doughnut',
+    dateFilter: { from: null, to: null }
   };
 
   init();
@@ -316,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       wireExports();
       wireChartTypeToggle();
+      wireDateFilter();
     }).catch(() => {
       // leave empty state
     });
@@ -328,13 +320,29 @@ document.addEventListener('DOMContentLoaded', () => {
     setText('dropoffRateValue', '0%');
   }
 
+  function getFilteredResponsesForSurvey(surveyId) {
+    const all = state.responsesBySurvey[surveyId] || [];
+    const filter = state.dateFilter || {};
+    const from = filter.from || null;
+    const to = filter.to || null;
+    if (!from && !to) return all;
+    return all.filter(r => {
+      if (!r.createdAt) return false;
+      const t = new Date(r.createdAt);
+      if (Number.isNaN(t.getTime())) return false;
+      if (from && t < from) return false;
+      if (to && t > to) return false;
+      return true;
+    });
+  }
+
   function getAnswerDistribution(surveyId, questionId) {
     const meta = state.surveys.find(s => s.id === surveyId);
     if (!meta) return { labels: [], counts: [] };
     const q = (meta.questions || []).find(x => x.id == questionId);
     const options = toOptionArray(q && q.options);
     if (!q || options.length === 0) return { labels: [], counts: [] };
-    const responses = state.responsesBySurvey[surveyId] || [];
+    const responses = getFilteredResponsesForSurvey(surveyId);
     const labels = options.map(o => String(o.label));
     const counts = new Map(options.map(o => [String(o.value), 0]));
     responses.forEach(r => {
@@ -492,14 +500,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateKpiForSelectedQuestion(surveyId, q) {
     const stats = state.latestStats;
     const surveyTotalEl = document.getElementById('kpiSurveyTotal');
-    const questionTotalEl = document.getElementById('kpiQuestionTotal');
     const topEl = document.getElementById('kpiTopOption');
 
-    if (!surveyTotalEl && !questionTotalEl && !topEl) return;
+    if (!surveyTotalEl && !topEl) return;
 
     if (!stats || stats.surveyId !== surveyId) {
       if (surveyTotalEl) surveyTotalEl.textContent = '0건';
-      if (questionTotalEl) questionTotalEl.textContent = '0건';
       if (topEl) topEl.textContent = '-';
       return;
     }
@@ -508,13 +514,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (surveyTotalEl) surveyTotalEl.textContent = `${totalResponses}건`;
 
     if (!q) {
-      if (questionTotalEl) questionTotalEl.textContent = '0건';
       if (topEl) topEl.textContent = '-';
       return;
     }
-
-    const respondedCount = typeof q.respondedCount === 'number' ? q.respondedCount : 0;
-    if (questionTotalEl) questionTotalEl.textContent = `${respondedCount}건`;
 
     let topLabel = '-';
     if (Array.isArray(q.options) && q.options.length) {
@@ -573,13 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
     API.getResults(surveyId).then(rows => {
       const responses = normalizeResultsRows(rows);
       state.responsesBySurvey[surveyId] = responses;
-      // compute and cache stats for exports
-      const meta = state.surveys.find(s => s.id === surveyId) || { id: surveyId, title: '' };
-      const stats = computeSurveyStats(meta, responses);
-      // latestStats에 원시 응답도 포함시켜 JSON 내보내기에서 실제 답변 내용을 볼 수 있도록 함
-      state.latestStats = { surveyId, title: meta.title, rawResponses: responses, ...stats };
-      populateQuestionSelect(surveyId);
-      updateKpiForSelectedQuestion(surveyId, null);
+      rebuildStatsForCurrentSurvey();
     }).catch(() => {
       // failure state: clear visuals
       if (state.selectedDropoutChart) { state.selectedDropoutChart.destroy(); state.selectedDropoutChart = null; }
@@ -587,6 +583,17 @@ document.addEventListener('DOMContentLoaded', () => {
       setDropoutEmpty(true); setOptionEmpty(true);
       state.latestStats = null;
     });
+  }
+
+  function rebuildStatsForCurrentSurvey() {
+    const surveyId = state.selectedSurveyId;
+    if (!surveyId) return;
+    const meta = state.surveys.find(s => s.id === surveyId) || { id: surveyId, title: '' };
+    const filteredResponses = getFilteredResponsesForSurvey(surveyId);
+    const stats = computeSurveyStats(meta, filteredResponses);
+    state.latestStats = { surveyId, title: meta.title, rawResponses: filteredResponses, ...stats };
+    populateQuestionSelect(surveyId);
+    updateKpiForSelectedQuestion(surveyId, null);
   }
 
   function wireChartTypeToggle() {
@@ -608,6 +615,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     });
+  }
+
+  function wireDateFilter() {
+    const fromInput = document.getElementById('dateFrom');
+    const toInput = document.getElementById('dateTo');
+    const clearBtn = document.getElementById('dateFilterClearBtn');
+    if (!fromInput || !toInput) return;
+
+    const apply = () => {
+      const fromVal = fromInput.value ? new Date(fromInput.value + 'T00:00:00') : null;
+      const toVal = toInput.value ? new Date(toInput.value + 'T23:59:59.999') : null;
+      state.dateFilter = { from: fromVal, to: toVal };
+      rebuildStatsForCurrentSurvey();
+    };
+
+    fromInput.addEventListener('change', apply);
+    toInput.addEventListener('change', apply);
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        fromInput.value = '';
+        toInput.value = '';
+        state.dateFilter = { from: null, to: null };
+        rebuildStatsForCurrentSurvey();
+      });
+    }
   }
 
   function renderDropoff(items) {
