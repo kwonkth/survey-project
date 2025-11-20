@@ -419,7 +419,25 @@ document.addEventListener('DOMContentLoaded', () => {
     state.doughnutChart = new Chart(ctx, {
       type: 'doughnut',
       data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderColor: borders }] },
-      options: { responsive: true, maintainAspectRatio: false }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          datalabels: {
+            color: '#333',
+            font: { weight: 'bold', size: 11 },
+            formatter: (value, context) => {
+              const dataArr = context.chart.data.datasets[0].data || [];
+              const total = dataArr.reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
+              if (!total) return '';
+              const pct = Math.round((value / total) * 100);
+              return pct ? `${pct}%` : '';
+            }
+          }
+        }
+      },
+      plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
     });
   }
 
@@ -427,19 +445,28 @@ document.addEventListener('DOMContentLoaded', () => {
   function setDropoutEmpty(show){ const el = document.getElementById('dropoutEmpty'); if (el) el.style.display = show ? 'block' : 'none'; }
 
   function setSelectedQuestionTitle(surveyId, questionId){
-    const el = document.getElementById('selectedQuestionTitle');
-    if (!el) return;
+    const titleEl = document.getElementById('selectedQuestionTitle');
+    const totalEl = document.getElementById('selectedQuestionTotal');
+    if (!titleEl && !totalEl) return;
     const stats = state.latestStats;
     if (!stats || stats.surveyId !== surveyId || !Array.isArray(stats.questions)) {
-      el.textContent = '';
+      if (titleEl) titleEl.textContent = '';
+      if (totalEl) totalEl.textContent = '';
       return;
     }
     const q = stats.questions.find(x => String(x.id) === String(questionId));
     if (!q) {
-      el.textContent = '';
+      if (titleEl) titleEl.textContent = '';
+      if (totalEl) totalEl.textContent = '';
       return;
     }
-    el.textContent = `Q${q.number}. ${q.text || ''}`;
+    if (titleEl) {
+      titleEl.textContent = `Q${q.number}. ${q.text || ''}`;
+    }
+    if (totalEl) {
+      const total = typeof q.respondedCount === 'number' ? q.respondedCount : 0;
+      totalEl.textContent = `총 응답: ${total}건`;
+    }
   }
 
   function onSurveySelected(surveyId){
