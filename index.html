@@ -189,9 +189,11 @@
 
                 <div class="form-group">
                     <label>질문 개수를 선택해주세요.</label>
-                    <div class="ai-count-buttons">
-                        <button type="button" class="ai-count-btn selected" data-count="5">5문항</button>
-                        <button type="button" class="ai-count-btn" data-count="10">10문항</button>
+                    <div class="ai-count-range">
+                        <input type="range" id="aiCountSlider" min="3" max="10" value="5">
+                        <div class="ai-count-display">
+                            <span id="aiCountValue">5</span>문항
+                        </div>
                     </div>
                 </div>
             </div>

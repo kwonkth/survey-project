@@ -148,7 +148,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const aiGenCancel = document.getElementById('aiGenCancel');
     const aiGenerateBtn = document.getElementById('aiGenerateBtn');
     const aiTopicInput = document.getElementById('aiTopicInput');
-    const aiCountButtons = document.querySelectorAll('.ai-count-btn');
+    const aiCountSlider = document.getElementById('aiCountSlider');
+    const aiCountValueLabel = document.getElementById('aiCountValue');
     const aiTopicPresetButtons = document.querySelectorAll('.ai-topic-btn');
     let aiSelectedQuestionCount = 5;
 
@@ -173,7 +174,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function buildQuestionEditorHtml(q, index) {
         const safeText = String(q.text || '').trim();
-        const safeType = ['radio', 'checkbox', 'text'].includes(q.type) ? q.type : 'text';
+        const rawType = String(q.type || 'text');
+        const isDependentType = rawType === 'text-dependent';
+        const baseType = rawType.startsWith('text') ? 'text' : (['radio', 'checkbox'].includes(rawType) ? rawType : 'text');
+        const safeType = baseType;
         const isRequired = q.required !== false;
         const optionsJoined = Array.isArray(q.options) ? q.options.map(o => String(o)).join('\n') : '';
         const maxSelNum = q.maxSelection != null ? parseInt(q.maxSelection, 10) : NaN;
@@ -201,9 +205,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="form-group">
                     <label>질문 유형</label>
                     <select class="form-control ai-q-type">
-                        <option value="radio" ${safeType === 'radio' ? 'selected' : ''}>객관식 (단일 선택)</option>
-                        <option value="checkbox" ${safeType === 'checkbox' ? 'selected' : ''}>객관식 (복수 선택)</option>
-                        <option value="text" ${safeType === 'text' ? 'selected' : ''}>서술형</option>
+                        <option value="radio" ${safeType === 'radio' && !isDependentType ? 'selected' : ''}>객관식 (단일 선택)</option>
+                        <option value="checkbox" ${safeType === 'checkbox' && !isDependentType ? 'selected' : ''}>객관식 (복수 선택)</option>
+                        <option value="text" ${safeType === 'text' && !isDependentType ? 'selected' : ''}>서술형 (일반)</option>
+                        <option value="text-dependent" ${isDependentType ? 'selected' : ''}>서술형 (종속형)</option>
                     </select>
                 </div>
                 <div class="form-group ai-q-options-group" ${optionsGroupStyle}>
@@ -230,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <input type="checkbox" class="ai-q-required" ${isRequired ? 'checked' : ''} />
                     <span>필수 질문</span>
                 </div>
-                <div class="form-group ai-q-visibility-group">
+                <div class="form-group ai-q-visibility-group" ${isDependentType ? '' : 'style="display:none;"'}>
                     <label>조건부 표시 (선택사항)</label>
                     <div class="ai-visibility-row" style="display:flex;align-items:center;gap:8px;">
                         <span>부모 질문 번호</span>
@@ -476,7 +481,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const maxSelInput = row.querySelector('.ai-q-maxselection');
 
             const base = Array.isArray(aiGeneratedSurvey?.questions) ? aiGeneratedSurvey.questions[index] || {} : {};
-            const type = typeSelect?.value || base.type || 'text';
+            const rawSelectValue = typeSelect?.value || base.type || 'text';
+            const isDependentType = rawSelectValue === 'text-dependent';
+            const type = rawSelectValue.startsWith('text') ? 'text' : rawSelectValue;
             const text = textInput?.value?.trim() || base.text || `문항 ${index + 1}`;
             let options = [];
             if (type === 'radio' || type === 'checkbox') {
@@ -513,7 +520,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const parentIdxNum = parseInt(parentIndexInput.value, 10);
             const parentValue = parentValueInput.value.trim();
 
-            if (!Number.isFinite(parentIdxNum) || parentIdxNum < 1 || parentIdxNum > updatedQuestions.length || !parentValue) {
+            const rawSelectValue = row.querySelector('.ai-q-type')?.value || 'text';
+            const isDependentType = rawSelectValue === 'text-dependent';
+
+            if (!isDependentType || !Number.isFinite(parentIdxNum) || parentIdxNum < 1 || parentIdxNum > updatedQuestions.length || !parentValue) {
                 delete updatedQuestions[index].visibility;
                 return;
             }
@@ -564,6 +574,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // visibility 정보를 UI에서 다루기 위해 parentIndex/parentValue로 변환
             let visibilityParentIndex = '';
             let visibilityParentValue = '';
+            let typeForSelect = safeType;
             if (q.visibility && q.visibility.parentId) {
                 const parentIdx = questions.findIndex((qq, idx) => {
                     const baseId = qq.id || `q_${idx + 1}`;
@@ -572,12 +583,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (parentIdx >= 0) {
                     visibilityParentIndex = parentIdx + 1;
                     visibilityParentValue = q.visibility.value || '';
+                    // 서술형 + visibility가 있으면 드롭다운에서 '서술형 (종속형)' 으로 표시
+                    if (safeType === 'text') {
+                        typeForSelect = 'text-dependent';
+                    }
                 }
             }
 
             wrapper.innerHTML = buildQuestionEditorHtml({
                 text: q.text,
-                type: safeType,
+                type: typeForSelect,
                 required: q.required,
                 options: safeOptions,
                 visibilityParentIndex,
@@ -589,18 +604,30 @@ document.addEventListener("DOMContentLoaded", () => {
             const typeSelect = wrapper.querySelector('.ai-q-type');
             const optionsGroup = wrapper.querySelector('.ai-q-options-group');
             const maxGroup = wrapper.querySelector('.ai-q-maxselection-group');
+            const visibilityGroup = wrapper.querySelector('.ai-q-visibility-group');
             if (typeSelect && optionsGroup) {
-                typeSelect.addEventListener('change', () => {
-                    if (typeSelect.value === 'text') {
+                const applyTypeUi = () => {
+                    const v = typeSelect.value || 'text';
+                    const isTextBase = v.startsWith('text');
+                    const isDependentType = v === 'text-dependent';
+
+                    if (isTextBase) {
                         optionsGroup.style.display = 'none';
                         if (maxGroup) maxGroup.style.display = 'none';
                     } else {
                         optionsGroup.style.display = '';
                         if (maxGroup) {
-                            maxGroup.style.display = typeSelect.value === 'checkbox' ? '' : 'none';
+                            maxGroup.style.display = v === 'checkbox' ? '' : 'none';
                         }
                     }
-                });
+
+                    if (visibilityGroup) {
+                        visibilityGroup.style.display = isDependentType ? '' : 'none';
+                    }
+                };
+
+                applyTypeUi();
+                typeSelect.addEventListener('change', applyTypeUi);
             }
         });
 
@@ -630,25 +657,26 @@ document.addEventListener("DOMContentLoaded", () => {
         aiGenCancel.addEventListener('click', closeAiModal);
     }
 
+    // 바깥 영역(오버레이) 클릭 시 모달이 닫히지 않도록 기본 동작을 막는다.
+    // 의도치 않은 미스클릭으로 질문 생성/편집 작업이 사라지지 않게 하기 위함.
     window.addEventListener('click', (e) => {
-        if (e.target === aiGenModal) {
-            closeAiModal();
-        }
-        if (e.target === aiPreviewModal) {
-            closeAiPreviewModal();
-        }
+        // no-op: 모달 닫기 동작 없음 (X 버튼 및 명시적 닫기 버튼만 사용)
     });
 
-    // AI 질문 개수 선택 버튼 동작
-    if (aiCountButtons && aiCountButtons.length) {
-        aiCountButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const count = parseInt(btn.dataset.count || '5', 10);
-                aiSelectedQuestionCount = count === 10 ? 10 : 5;
-                aiCountButtons.forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-            });
-        });
+    // AI 질문 개수 선택: 슬라이더 (3~10문항)
+    if (aiCountSlider) {
+        const applySliderValue = () => {
+            let v = parseInt(aiCountSlider.value, 10);
+            if (!Number.isFinite(v)) v = 5;
+            if (v < 3) v = 3;
+            if (v > 10) v = 10;
+            aiSelectedQuestionCount = v;
+            if (aiCountValueLabel) {
+                aiCountValueLabel.textContent = String(v);
+            }
+        };
+        applySliderValue();
+        aiCountSlider.addEventListener('input', applySliderValue);
     }
 
     // AI 주제 프리셋 버튼: 클릭 시 주제 입력란에 채워 넣기
@@ -666,7 +694,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (aiGenerateBtn) {
         aiGenerateBtn.addEventListener('click', async () => {
             const topic = aiTopicInput?.value?.trim();
-            const questionCount = aiSelectedQuestionCount === 10 ? 10 : 5;
+            let questionCount = parseInt(aiSelectedQuestionCount, 10);
+            if (!Number.isFinite(questionCount)) questionCount = 5;
+            if (questionCount < 3) questionCount = 3;
+            if (questionCount > 10) questionCount = 10;
 
             if (!topic) {
                 alert('설문 주제를 입력해주세요.');
@@ -872,20 +903,13 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             e.stopPropagation();
 
-            // 설문관리에서 넘어온 편집 모드일 때는 임시저장을 하지 않고 그냥 닫기만 한다.
+            // X 버튼에서는 임시저장을 시도하지 않고, 단순히 닫기만 수행한다.
+            // (설문관리에서 넘어온 편집 모드인 경우에는 URL 파라미터도 정리)
+            closeAiPreviewModal();
             if (isEditingExistingSurvey) {
-                closeAiPreviewModal();
                 clearSurveyIdQueryParam();
                 isEditingExistingSurvey = false;
                 currentSurveyApiId = null;
-                return;
-            }
-
-            const shouldSave = window.confirm('변경 내용을 임시 저장하시겠습니까?\n\n[확인]: 임시 저장 후 닫기\n[취소]: 저장하지 않고 닫기');
-            if (shouldSave) {
-                await saveAiSurveyDraftAndClose();
-            } else {
-                closeAiPreviewModal();
             }
         });
     }
