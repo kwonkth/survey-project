@@ -30,9 +30,15 @@
             <div class="kpi-label">선택한 설문 총 응답 수</div>
             <div id="kpiSurveyTotal" class="kpi-value">0건</div>
           </div>
-          <div class="kpi-item">
-            <div class="kpi-label">현재 문항 응답 수</div>
-            <div id="kpiQuestionTotal" class="kpi-value">0건</div>
+          <div class="kpi-item kpi-date-filter">
+            <div class="kpi-label">응답 기간</div>
+            <div class="kpi-date-row">
+              <input type="date" id="dateFrom" class="kpi-date-input" />
+              <span class="kpi-date-separator">~</span>
+              <input type="date" id="dateTo" class="kpi-date-input" />
+              <button type="button" id="dateFilterClearBtn" class="kpi-date-clear">전체</button>
+            </div>
+            <div class="kpi-date-hint">날짜를 비우면 전체 기간이 집계됩니다.</div>
           </div>
           <div class="kpi-item">
             <div class="kpi-label">최다 선택 항목</div>
@@ -189,6 +195,45 @@
       font-size: 1.25rem;
       font-weight: 700;
       color: #111827;
+    }
+
+    .analytics-page .kpi-date-filter {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .analytics-page .kpi-date-row {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-bottom: 0.25rem;
+      flex-wrap: wrap;
+    }
+    .analytics-page .kpi-date-input {
+      padding: 0.25rem 0.45rem;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+    }
+    .analytics-page .kpi-date-separator {
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+    .analytics-page .kpi-date-clear {
+      border: none;
+      background: #e5e7eb;
+      border-radius: 999px;
+      padding: 0.15rem 0.75rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: #374151;
+    }
+    .analytics-page .kpi-date-clear:hover {
+      background: #d1d5db;
+    }
+    .analytics-page .kpi-date-hint {
+      font-size: 0.75rem;
+      color: #9ca3af;
     }
 
     /* Chart header + chart type toggle */
