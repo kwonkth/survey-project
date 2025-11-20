@@ -189,23 +189,47 @@
         }
 
         @media (max-width: 768px) {
+            /* 모바일에서는 전체 페이지를 세로 스크롤 가능하게 변경 */
+            body, html {
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto;
+                align-items: flex-start;
+            }
+
+            .mobile-container {
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+
+            #content,
+            #game-container {
+                height: auto;
+                min-height: 100vh;
+            }
+
             #game-container {
                 justify-content: flex-start;
                 padding-top: 32px;
                 padding-bottom: 32px;
             }
+
             #text-box {
                 margin: 12px;
                 width: 90%;
+                max-height: none;
             }
+
             #optionsContainer {
                 gap: 12px;
                 /* 모바일에서 보기(질문 선택지)가 많을 때, 아래가 잘리지 않고
                    위/아래로 슬라이드(스크롤)해서 볼 수 있도록 별도 스크롤 영역으로 지정 */
-                max-height: 50vh;
+                max-height: 60vh;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
             }
+
             /* 모바일 기준 질문/텍스트 타이포 조정 (약 20px 전후) */
             #question-text,
             #questionContainer p {
