@@ -183,60 +183,16 @@
 
             <div class="ai-modal-body">
                 <div class="form-group">
-                    <label>스토리를 포함하여 설문을 진행할까요?</label>
-                    <div class="radio-group" id="aiStoryGroup">
-                        <label class="radio-option">
-                            <input type="radio" name="aiStoryEnabled" value="yes" checked>
-                            네 (스토리 기반 질문)
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="aiStoryEnabled" value="no">
-                            아니오 (일반 설문)
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-group">
                     <label for="aiTopicInput">설문의 주제를 입력해주세요.</label>
                     <input type="text" id="aiTopicInput" class="form-control" placeholder="예: 대학 축제 만족도 조사, 게임 성향 분석 등" />
                 </div>
 
                 <div class="form-group">
-                    <label for="aiQuestionCountInput">원하는 문항 수를 입력해주세요. (5~20, 그 이상도 가능)</label>
-                    <input type="number" id="aiQuestionCountInput" class="form-control" min="5" value="5" />
-                </div>
-
-                <div class="form-group">
-                    <label for="aiQuestionTypeSelect">질문 형식을 선택해주세요.</label>
-                    <select id="aiQuestionTypeSelect" class="form-control">
-                        <option value="2지선다">2지선다 (예/아니오)</option>
-                        <option value="4지선다">4지선다</option>
-                        <option value="5지선다">5지선다</option>
-                        <option value="서술형">서술형</option>
-                        <option value="혼합" selected>혼합 (AI가 자동으로 구성)</option>
-                    </select>
-                </div>
-
-                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
-                    <input type="checkbox" id="aiIncludeNameInput" />
-                    <label for="aiIncludeNameInput" style="margin:0;">이름 문항을 포함할까요? (자동으로 맨 앞에 삽입됩니다)</label>
-                </div>
-
-                <div class="form-group">
-                    <label for="aiMandatoryQuestionsInput">필수로 포함할 질문이 있으면 작성해주세요. (한 줄당 1개)</label>
-                    <textarea id="aiMandatoryQuestionsInput" class="form-control" rows="3" placeholder="예: 참여자의 이메일을 입력해주세요."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="aiStyleSelect">분위기 스타일을 선택해주세요.</label>
-                    <select id="aiStyleSelect" class="form-control">
-                        <option value="">기본</option>
-                        <option value="epic_fantasy">장엄한 판타지</option>
-                        <option value="romance">로맨스</option>
-                        <option value="horror">호러</option>
-                        <option value="none">스토리 없음 (일반 설문)</option>
-                    </select>
-                    <div class="form-helper">/styles/{style_id}.json 파일이 있을 경우 해당 템플릿을 함께 반영합니다.</div>
+                    <label>질문 개수를 선택해주세요.</label>
+                    <div class="ai-count-buttons">
+                        <button type="button" class="ai-count-btn selected" data-count="5">5문항</button>
+                        <button type="button" class="ai-count-btn" data-count="10">10문항</button>
+                    </div>
                 </div>
             </div>
 

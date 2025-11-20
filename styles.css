@@ -303,6 +303,35 @@ body {
     margin-top: 1.5rem;
 }
 
+/* AI question count buttons */
+.ai-count-buttons {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.ai-count-btn {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.ai-count-btn.selected {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.15);
+}
+
+.ai-count-btn:not(.selected):hover {
+    background-color: #f5f5ff;
+}
+
 /* AI Preview & Edit Modal */
 .ai-preview-modal {
     padding: 2rem 2.5rem;

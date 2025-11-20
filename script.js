@@ -88,11 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const aiGenCancel = document.getElementById('aiGenCancel');
     const aiGenerateBtn = document.getElementById('aiGenerateBtn');
     const aiTopicInput = document.getElementById('aiTopicInput');
-    const aiQuestionCountInput = document.getElementById('aiQuestionCountInput');
-    const aiQuestionTypeSelect = document.getElementById('aiQuestionTypeSelect');
-    const aiStyleSelect = document.getElementById('aiStyleSelect');
-    const aiIncludeNameInput = document.getElementById('aiIncludeNameInput');
-    const aiMandatoryQuestionsInput = document.getElementById('aiMandatoryQuestionsInput');
+    const aiCountButtons = document.querySelectorAll('.ai-count-btn');
+    let aiSelectedQuestionCount = 5;
 
     const aiPreviewModal = document.getElementById('aiPreviewModal');
     const aiPreviewClose = document.getElementById('aiPreviewClose');
@@ -203,34 +200,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // AI 질문 개수 선택 버튼 동작
+    if (aiCountButtons && aiCountButtons.length) {
+        aiCountButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const count = parseInt(btn.dataset.count || '5', 10);
+                aiSelectedQuestionCount = count === 10 ? 10 : 5;
+                aiCountButtons.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+            });
+        });
+    }
+
     if (aiGenerateBtn) {
         aiGenerateBtn.addEventListener('click', async () => {
             const topic = aiTopicInput?.value?.trim();
-            const questionCount = parseInt(aiQuestionCountInput?.value || '5', 10);
-            const style_id = aiStyleSelect?.value || '';
-            const includeNameQuestion = !!aiIncludeNameInput?.checked;
-
-            const questionTypeLabel = aiQuestionTypeSelect?.value || '혼합';
-            let questionTypeMode = 'auto';
-            if (questionTypeLabel.includes('2지선다')) questionTypeMode = 'fixed_two';
-            else if (questionTypeLabel.includes('4지선다')) questionTypeMode = 'fixed_four';
-            else if (questionTypeLabel.includes('5지선다')) questionTypeMode = 'fixed_five';
-            else if (questionTypeLabel.includes('혼합')) questionTypeMode = 'mixed';
-
-            const styleLabel = aiStyleSelect?.selectedOptions?.[0]?.textContent?.trim() || '';
-            const mandatoryRaw = aiMandatoryQuestionsInput?.value || '';
-            const mandatoryQuestions = mandatoryRaw
-                .split('\n')
-                .map(v => v.trim())
-                .filter(Boolean);
+            const questionCount = aiSelectedQuestionCount === 10 ? 10 : 5;
 
             if (!topic) {
                 alert('설문 주제를 입력해주세요.');
-                return;
-            }
-
-            if (!Number.isFinite(questionCount) || questionCount < 1) {
-                alert('문항 수를 올바르게 입력해주세요.');
                 return;
             }
 
@@ -245,11 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     body: JSON.stringify({
                         topic,
                         questionCount,
-                        style: styleLabel,
-                        style_id,
-                        includeNameQuestion,
-                        questionTypeMode,
-                        mandatoryQuestions
+                        includeNameQuestion: true
                     })
                 });
 
