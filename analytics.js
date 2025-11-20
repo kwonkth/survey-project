@@ -219,46 +219,112 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function toCSV(data) {
-    // Flatten per-question stats
+    const surveyId = data.surveyId;
+    const meta = state.surveys.find(s => s.id === surveyId) || { questions: [] };
+    const allQuestions = Array.isArray(meta.questions) ? meta.questions : [];
+    const nameQuestion = allQuestions.find(q => isNameQuestion(q));
+    const normalQuestions = allQuestions.filter(q => !isNameQuestion(q));
+
     const rows = [];
-    rows.push(['SurveyId','SurveyTitle','QuestionNo','QuestionText','Type','Responded','Total','Dropoff(%)','OptionLabel','OptionCount','OptionPercent','SampleTextAnswers']);
-    const total = data.totalResponses;
-    data.questions.forEach(q => {
-      if (q.options && q.options.length) {
-        q.options.forEach(o => {
-          rows.push([
-            data.surveyId,
-            data.title || '',
-            q.number,
-            sanitizeCSV(q.text),
-            q.type,
-            q.respondedCount,
-            total,
-            q.dropoffRate,
-            sanitizeCSV(o.label),
-            o.count,
-            o.percent,
-            ''
-          ]);
-        });
-      } else {
-        const sample = (q.textAnswers || []).slice(0,5).join(' | ');
-        rows.push([
-          data.surveyId,
-          data.title || '',
-          q.number,
-          sanitizeCSV(q.text),
-          q.type,
-          q.respondedCount,
-          total,
-          q.dropoffRate,
-          '',
-          '',
-          '',
-          sanitizeCSV(sample)
-        ]);
-      }
+    // Header row: 이름, 제출 일시, 각 문항 텍스트
+    const header = ['이름', '제출 일시'];
+    normalQuestions.forEach((q, idx) => {
+      header.push(sanitizeCSV(q.text || `문항 ${idx + 1}`));
     });
+    rows.push(header);
+
+    const responses = Array.isArray(data.rawResponses) ? data.rawResponses : [];
+
+    responses.forEach((r, rowIdx) => {
+      const line = [];
+      // 이름
+      let nameVal = '';
+      if (nameQuestion) {
+        const ans = (r.answers || []).find(a => a.questionId == nameQuestion.id);
+        if (ans && ans.value != null) {
+          nameVal = String(Array.isArray(ans.value) ? ans.value[0] : ans.value);
+        }
+      }
+      line.push(nameVal);
+
+      // 제출 일시
+      line.push(formatDateForCsv(r.createdAt));
+
+      // 각 문항별 응답
+      normalQuestions.forEach(q => {
+        const ans = (r.answers || []).find(a => a.questionId == q.id);
+        if (!ans || ans.value == null) {
+          line.push('');
+          return;
+        }
+        const opts = toOptionArray(q.options);
+        const values = Array.isArray(ans.value) ? ans.value : [ans.value];
+        const labels = values.map(v => {
+          const s = String(v);
+          const match = opts.find(o => o.value === s || o.label === s);
+          return match ? match.label : s;
+        });
+        line.push(labels.join(', '));
+      });
+
+      rows.push(line);
+    });
+
+    return rows.map(r => r.map(cell => wrapCSV(String(cell ?? ''))).join(',')).join('\n');
+  }
+
+  function toCSVWide(data) {
+    const surveyId = data.surveyId;
+    const meta = state.surveys.find(s => s.id === surveyId) || { questions: [] };
+    const allQuestions = Array.isArray(meta.questions) ? meta.questions : [];
+    const nameQuestion = allQuestions.find(q => isNameQuestion(q));
+    const normalQuestions = allQuestions.filter(q => !isNameQuestion(q));
+
+    const rows = [];
+    // Header row: 이름, 제출 일시, 각 문항 텍스트
+    const header = ['이름', '제출 일시'];
+    normalQuestions.forEach((q, idx) => {
+      header.push(sanitizeCSV(q.text || `문항 ${idx + 1}`));
+    });
+    rows.push(header);
+
+    const responses = Array.isArray(data.rawResponses) ? data.rawResponses : [];
+
+    responses.forEach((r, rowIdx) => {
+      const line = [];
+      // 이름
+      let nameVal = '';
+      if (nameQuestion) {
+        const ans = (r.answers || []).find(a => a.questionId == nameQuestion.id);
+        if (ans && ans.value != null) {
+          nameVal = String(Array.isArray(ans.value) ? ans.value[0] : ans.value);
+        }
+      }
+      line.push(nameVal);
+
+      // 제출 일시
+      line.push(formatDateForCsv(r.createdAt));
+
+      // 각 문항별 응답
+      normalQuestions.forEach(q => {
+        const ans = (r.answers || []).find(a => a.questionId == q.id);
+        if (!ans || ans.value == null) {
+          line.push('');
+          return;
+        }
+        const opts = toOptionArray(q.options);
+        const values = Array.isArray(ans.value) ? ans.value : [ans.value];
+        const labels = values.map(v => {
+          const s = String(v);
+          const match = opts.find(o => o.value === s || o.label === s);
+          return match ? match.label : s;
+        });
+        line.push(labels.join(', '));
+      });
+
+      rows.push(line);
+    });
+
     return rows.map(r => r.map(cell => wrapCSV(String(cell ?? ''))).join(',')).join('\n');
   }
 
@@ -445,10 +511,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (chartType === 'bar') {
-      options.indexAxis = 'y';
       options.scales = {
-        x: { beginAtZero: true, ticks: { precision: 0 } },
-        y: { ticks: { autoSkip: false } }
+        x: {
+          ticks: {
+            autoSkip: false,
+            maxRotation: 60,
+            minRotation: 45
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0 }
+        }
       };
     }
 
@@ -618,29 +692,48 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function wireDateFilter() {
-    const fromInput = document.getElementById('dateFrom');
-    const toInput = document.getElementById('dateTo');
-    const clearBtn = document.getElementById('dateFilterClearBtn');
-    if (!fromInput || !toInput) return;
+    const select = document.getElementById('dateRangePreset');
+    if (!select) return;
 
     const apply = () => {
-      const fromVal = fromInput.value ? new Date(fromInput.value + 'T00:00:00') : null;
-      const toVal = toInput.value ? new Date(toInput.value + 'T23:59:59.999') : null;
-      state.dateFilter = { from: fromVal, to: toVal };
+      const code = select.value || '7d';
+      const now = new Date();
+      let from = null;
+      let to = null;
+      if (code === '7d') {
+        to = now;
+        from = new Date(now);
+        from.setDate(from.getDate() - 6);
+      } else if (code === '1m') {
+        to = now;
+        from = new Date(now);
+        from.setMonth(from.getMonth() - 1);
+      } else if (code === '6m') {
+        to = now;
+        from = new Date(now);
+        from.setMonth(from.getMonth() - 6);
+      } else if (code === '1y') {
+        to = now;
+        from = new Date(now);
+        from.setFullYear(from.getFullYear() - 1);
+      } else if (code === 'all') {
+        from = null;
+        to = null;
+      }
+
+      state.dateFilter = { from, to };
+      const labelEl = document.getElementById('kpiDateRangeLabel');
+      if (labelEl) {
+        const text = select.options[select.selectedIndex]?.text || '';
+        labelEl.textContent = text;
+      }
       rebuildStatsForCurrentSurvey();
     };
 
-    fromInput.addEventListener('change', apply);
-    toInput.addEventListener('change', apply);
-
-    if (clearBtn) {
-      clearBtn.addEventListener('click', () => {
-        fromInput.value = '';
-        toInput.value = '';
-        state.dateFilter = { from: null, to: null };
-        rebuildStatsForCurrentSurvey();
-      });
-    }
+    select.addEventListener('change', apply);
+    // 초기값: 최근 7일
+    if (!select.value) select.value = '7d';
+    apply();
   }
 
   function renderDropoff(items) {
@@ -773,4 +866,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
   function truncate(t, n) { return !t ? '' : (t.length > n ? `${t.slice(0,n)}…` : t); }
   function escapeHTML(s){ return String(s).replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function formatDateForCsv(iso){
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `${y}-${m}-${day} ${hh}:${mm}`;
+  }
 });

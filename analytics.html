@@ -30,15 +30,9 @@
             <div class="kpi-label">선택한 설문 총 응답 수</div>
             <div id="kpiSurveyTotal" class="kpi-value">0건</div>
           </div>
-          <div class="kpi-item kpi-date-filter">
+          <div class="kpi-item">
             <div class="kpi-label">응답 기간</div>
-            <div class="kpi-date-row">
-              <input type="date" id="dateFrom" class="kpi-date-input" />
-              <span class="kpi-date-separator">~</span>
-              <input type="date" id="dateTo" class="kpi-date-input" />
-              <button type="button" id="dateFilterClearBtn" class="kpi-date-clear">전체</button>
-            </div>
-            <div class="kpi-date-hint">날짜를 비우면 전체 기간이 집계됩니다.</div>
+            <div id="kpiDateRangeLabel" class="kpi-value">최근 7일</div>
           </div>
           <div class="kpi-item">
             <div class="kpi-label">최다 선택 항목</div>
@@ -77,14 +71,23 @@
               <p id="selectedQuestionTitle" style="margin:0 0 0.25rem 0; font-weight:600; color:#2c3e50;"></p>
               <p id="selectedQuestionTotal" style="margin:0 0 0.75rem 0; font-size:0.9rem; color:#555;"></p>
             </div>
-            <div class="chart-type-toggle" aria-label="차트 유형 선택">
-              <button type="button" class="chart-type-btn active" data-type="doughnut">도넛</button>
-              <button type="button" class="chart-type-btn" data-type="bar">막대</button>
+            <div class="chart-header-controls">
+              <select id="dateRangePreset" class="chart-date-select" aria-label="응답 기간 선택">
+                <option value="7d" selected>최근 7일</option>
+                <option value="1m">최근 1개월</option>
+                <option value="6m">최근 6개월</option>
+                <option value="1y">최근 1년</option>
+                <option value="all">전체 기간</option>
+              </select>
+              <div class="chart-type-toggle" aria-label="차트 유형 선택">
+                <button type="button" class="chart-type-btn active" data-type="doughnut">도넛</button>
+                <button type="button" class="chart-type-btn" data-type="bar">막대</button>
+              </div>
             </div>
           </div>
           <div class="chart-and-table">
             <div class="chart-area">
-              <div style="height:300px"><canvas id="chart2"></canvas></div>
+              <div class="chart-canvas-wrap"><canvas id="chart2"></canvas></div>
               <div class="empty-state" id="optionEmpty" style="display:none; margin-top:0.5rem;">선택지 기반 문항을 선택하세요.</div>
             </div>
             <div class="table-area">
@@ -197,45 +200,6 @@
       color: #111827;
     }
 
-    .analytics-page .kpi-date-filter {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    .analytics-page .kpi-date-row {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      margin-bottom: 0.25rem;
-      flex-wrap: wrap;
-    }
-    .analytics-page .kpi-date-input {
-      padding: 0.25rem 0.45rem;
-      font-size: 0.85rem;
-      border-radius: 4px;
-      border: 1px solid #d1d5db;
-    }
-    .analytics-page .kpi-date-separator {
-      font-size: 0.85rem;
-      color: #6b7280;
-    }
-    .analytics-page .kpi-date-clear {
-      border: none;
-      background: #e5e7eb;
-      border-radius: 999px;
-      padding: 0.15rem 0.75rem;
-      font-size: 0.8rem;
-      cursor: pointer;
-      color: #374151;
-    }
-    .analytics-page .kpi-date-clear:hover {
-      background: #d1d5db;
-    }
-    .analytics-page .kpi-date-hint {
-      font-size: 0.75rem;
-      color: #9ca3af;
-    }
-
     /* Chart header + chart type toggle */
     .analytics-page .chart-card-header {
       display: flex;
@@ -243,6 +207,19 @@
       gap: 1rem;
       align-items: flex-start;
       margin-bottom: 0.75rem;
+    }
+    .analytics-page .chart-header-controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .analytics-page .chart-date-select {
+      padding: 0.35rem 0.6rem;
+      font-size: 0.85rem;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      color: #374151;
     }
     .analytics-page .chart-type-toggle {
       display: inline-flex;
@@ -273,6 +250,13 @@
     }
     .analytics-page .chart-area {
       min-height: 300px;
+    }
+    .analytics-page .chart-canvas-wrap {
+      height: 300px;
+      overflow-x: auto;
+    }
+    .analytics-page .chart-canvas-wrap canvas {
+      min-width: 480px;
     }
     .analytics-page .table-area {
       border-left: 1px solid #e5e7eb;
