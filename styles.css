@@ -958,21 +958,22 @@ textarea.form-control {
 }
 /* Dashboard stats + latest survey donut (index.html) */
 .dashboard-stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1.5fr;  /* ← 좌:통계 / 우:그래프 카드 */
+    display: flex;
+    flex-direction: column; /* 위: 통계 한 줄, 아래: 도넛 카드 */
     gap: 24px;
     width: 100%;
-    align-items: start;
 }
-
 
 .dashboard-stats-left {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;   /* 설문 개수 / 총 응답 / 평균 질문 개수를 가로로 */
     gap: 24px;
     width: 100%;
-    max-width: none; /* ← 제한 제거 */
-    margin: 0;
+}
+
+/* 통계 아이템이 가로 공간을 고르게 나누도록 */
+.stat-item {
+    flex: 1;
 }
 
 .latest-survey-card {
@@ -984,14 +985,14 @@ textarea.form-control {
     justify-content: flex-start;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     width: 100%;
-    max-width: 500px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
 }
 
 .latest-survey-donut-wrap {
     width: 100%;
     height: 260px;
-    margin-top: -10px;
+    margin-top: 8px;       /* 통계와의 간격만 약간 주기 */
     display: flex;
     justify-content: center;
     align-items: center;
