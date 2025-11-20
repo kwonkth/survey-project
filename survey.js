@@ -128,6 +128,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.onclick = () => handleOptionClick(optionText, qType, button, optionsContainer);
                 optionsContainer.appendChild(button);
             });
+
+            if (qType === 'checkbox') {
+                const maxSel = parseInt(question.maxSelection, 10);
+                if (Number.isFinite(maxSel) && maxSel > 0) {
+                    const hint = document.createElement('div');
+                    hint.textContent = `최대 ${maxSel}개까지 선택할 수 있습니다.`;
+                    hint.style.marginTop = '0.5rem';
+                    hint.style.fontSize = '0.9rem';
+                    hint.style.color = '#ffeaa7';
+                    optionsContainer.appendChild(hint);
+                }
+            }
         } else if (qType === 'text') {
             const textInput = document.createElement('input');
             textInput.type = 'text';
@@ -176,9 +188,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 moveToNextQuestion();
             }
         } else if (type === 'checkbox') {
-            // Logic for checkbox (multi-select) would be more complex
-            // For now, treat as single select for simplicity
+            const maxSel = parseInt(question.maxSelection, 10);
+            const hasLimit = Number.isFinite(maxSel) && maxSel > 0;
+
             if (button) {
+                const willSelect = !button.classList.contains('selected');
+                if (willSelect && hasLimit && optionsContainer) {
+                    const selectedCount = optionsContainer.querySelectorAll('.option-btn.selected').length;
+                    if (selectedCount >= maxSel) {
+                        alert(`최대 ${maxSel}개까지 선택할 수 있습니다.`);
+                        return;
+                    }
+                }
                 button.classList.toggle('selected');
             }
             if (!currentAnswer) {

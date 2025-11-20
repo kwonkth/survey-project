@@ -98,6 +98,304 @@ document.addEventListener("DOMContentLoaded", () => {
     const aiPreviewModalTitle = document.getElementById('aiPreviewModalTitle');
     const aiPreviewModalDesc = document.getElementById('aiPreviewModalDesc');
     const aiPreviewQuestionContainer = document.getElementById('aiPreviewQuestionContainer');
+    const aiPreviewTabs = document.querySelectorAll('.ai-preview-tab');
+    const aiPreviewEditPanel = document.getElementById('aiPreviewEditPanel');
+    const aiPreviewLivePanel = document.getElementById('aiPreviewLivePanel');
+    const aiAddQuestionBtn = document.getElementById('aiAddQuestionBtn');
+
+    function escapeHtml(str) {
+        return String(str || '').replace(/[&<>"']/g, (ch) => {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+            return map[ch] || ch;
+        });
+    }
+
+    function buildQuestionEditorHtml(q, index) {
+        const safeText = String(q.text || '').trim();
+        const safeType = ['radio', 'checkbox', 'text'].includes(q.type) ? q.type : 'text';
+        const isRequired = q.required !== false;
+        const optionsJoined = Array.isArray(q.options) ? q.options.map(o => String(o)).join('\n') : '';
+        const maxSelNum = q.maxSelection != null ? parseInt(q.maxSelection, 10) : NaN;
+        const maxSelValue = Number.isFinite(maxSelNum) && maxSelNum > 0 ? maxSelNum : '';
+        const optionsGroupStyle = safeType === 'text' ? 'style="display:none;"' : '';
+        const maxGroupStyle = safeType === 'checkbox' ? '' : 'style="display:none;"';
+        return `
+            <div class="ai-q-header">
+                <div class="ai-q-header-left">
+                    <span class="ai-q-handle" draggable="true" title="질문 순서 변경">⠿</span>
+                    <span class="ai-q-label">Q${index + 1}</span>
+                </div>
+                <div class="ai-q-header-right">
+                    <button type="button" class="btn-icon ai-q-ai-rewrite" title="AI로 질문 다듬기">✨</button>
+                    <button type="button" class="btn-icon ai-q-duplicate" title="질문 복제">❐</button>
+                    <button type="button" class="btn-icon ai-q-delete" title="질문 삭제">🗑️</button>
+                </div>
+            </div>
+            <div class="ai-q-body">
+                <div class="form-group">
+                    <label>질문 내용</label>
+                    <input type="text" class="form-control ai-q-text" value="${escapeHtml(safeText)}">
+                </div>
+                <div class="form-group">
+                    <label>질문 유형</label>
+                    <select class="form-control ai-q-type">
+                        <option value="radio" ${safeType === 'radio' ? 'selected' : ''}>객관식 (단일 선택)</option>
+                        <option value="checkbox" ${safeType === 'checkbox' ? 'selected' : ''}>객관식 (복수 선택)</option>
+                        <option value="text" ${safeType === 'text' ? 'selected' : ''}>서술형</option>
+                    </select>
+                </div>
+                <div class="form-group ai-q-options-group" ${optionsGroupStyle}>
+                    <label>보기 옵션</label>
+                    <textarea class="form-control ai-q-options" rows="3" style="display:none;">${escapeHtml(optionsJoined)}</textarea>
+                    <div class="ai-option-actions">
+                        <button type="button" class="btn-text ai-add-option-row">+ 옵션 추가</button>
+                        <button type="button" class="btn-text ai-bulk-toggle">일괄 입력 모드</button>
+                    </div>
+                    <div class="ai-option-list"></div>
+                    <div class="ai-bulk-editor" style="display:none;">
+                        <textarea class="form-control ai-bulk-text" rows="4"></textarea>
+                        <div class="ai-bulk-actions">
+                            <button type="button" class="btn btn-secondary ai-bulk-cancel">취소</button>
+                            <button type="button" class="btn btn-primary ai-bulk-apply">적용</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group ai-q-maxselection-group" ${maxGroupStyle}>
+                    <label>최대 선택 개수 (선택사항)</label>
+                    <input type="number" class="form-control ai-q-maxselection" min="1" placeholder="제한 없음" value="${maxSelValue !== '' ? maxSelValue : ''}">
+                </div>
+                <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" class="ai-q-required" ${isRequired ? 'checked' : ''} />
+                    <span>필수 질문</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function setupQuestionOptionList(wrapper, optionsArray) {
+        const textarea = wrapper.querySelector('.ai-q-options');
+        const listEl = wrapper.querySelector('.ai-option-list');
+        if (!textarea || !listEl) return;
+        const initial = Array.isArray(optionsArray) && optionsArray.length ? optionsArray : [''];
+        listEl.innerHTML = '';
+        initial.forEach(text => {
+            const row = document.createElement('div');
+            row.className = 'ai-option-row';
+            row.innerHTML = `
+                <span class="ai-option-handle" draggable="true" title="보기 순서 변경">≡</span>
+                <input type="text" class="form-control ai-option-input" value="${escapeHtml(String(text))}">
+                <button type="button" class="btn-icon ai-option-delete">🗑️</button>
+            `;
+            listEl.appendChild(row);
+        });
+        syncOptionsToTextarea(wrapper);
+    }
+
+    function syncOptionsToTextarea(wrapper) {
+        const textarea = wrapper.querySelector('.ai-q-options');
+        const listEl = wrapper.querySelector('.ai-option-list');
+        if (!textarea || !listEl) return;
+        const values = Array.from(listEl.querySelectorAll('.ai-option-input'))
+            .map(input => input.value.trim())
+            .filter(Boolean);
+        textarea.value = values.join('\n');
+    }
+
+    function renumberPreviewQuestions() {
+        const rows = aiPreviewQuestionContainer?.querySelectorAll('.ai-preview-question') || [];
+        rows.forEach((row, idx) => {
+            const label = row.querySelector('.ai-q-label');
+            if (label) label.textContent = `Q${idx + 1}`;
+        });
+    }
+
+    function renderLivePreviewFromDom() {
+        if (!aiPreviewLivePanel) return;
+        aiPreviewLivePanel.innerHTML = '';
+        const rows = aiPreviewQuestionContainer?.querySelectorAll('.ai-preview-question') || [];
+        rows.forEach((row, idx) => {
+            const textInput = row.querySelector('.ai-q-text');
+            const typeSelect = row.querySelector('.ai-q-type');
+            const requiredCheckbox = row.querySelector('.ai-q-required');
+            const optionInputs = row.querySelectorAll('.ai-option-input');
+            const text = textInput?.value?.trim() || `문항 ${idx + 1}`;
+            const type = typeSelect?.value || 'text';
+            const required = !!requiredCheckbox?.checked;
+            const options = Array.from(optionInputs).map(inp => inp.value.trim()).filter(Boolean);
+
+            const qEl = document.createElement('div');
+            qEl.className = 'ai-live-question';
+            const title = document.createElement('div');
+            title.className = 'ai-live-q-title';
+            title.textContent = `Q${idx + 1}. ${text}`;
+            qEl.appendChild(title);
+
+            if (type === 'text') {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control';
+                input.placeholder = required ? '필수 질문입니다.' : '답변을 입력하세요.';
+                input.disabled = true;
+                qEl.appendChild(input);
+            } else {
+                const list = document.createElement('ul');
+                list.className = 'ai-live-options';
+                options.forEach(opt => {
+                    const li = document.createElement('li');
+                    const label = document.createElement('label');
+                    const inp = document.createElement('input');
+                    inp.type = type === 'checkbox' ? 'checkbox' : 'radio';
+                    inp.disabled = true;
+                    label.appendChild(inp);
+                    label.appendChild(document.createTextNode(' ' + opt));
+                    li.appendChild(label);
+                    list.appendChild(li);
+                });
+                qEl.appendChild(list);
+            }
+
+            aiPreviewLivePanel.appendChild(qEl);
+        });
+    }
+
+    function setAiPreviewMode(mode) {
+        if (!aiPreviewEditPanel || !aiPreviewLivePanel) return;
+        if (mode === 'preview') {
+            aiPreviewEditPanel.style.display = 'none';
+            aiPreviewLivePanel.style.display = 'block';
+            renderLivePreviewFromDom();
+        } else {
+            aiPreviewEditPanel.style.display = 'block';
+            aiPreviewLivePanel.style.display = 'none';
+        }
+        if (aiPreviewTabs && aiPreviewTabs.length) {
+            aiPreviewTabs.forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.mode === mode);
+            });
+        }
+    }
+
+    let draggingQuestionCard = null;
+    let draggingOptionRow = null;
+
+    if (aiPreviewQuestionContainer) {
+        aiPreviewQuestionContainer.addEventListener('dragstart', (e) => {
+            const qHandle = e.target.closest('.ai-q-handle');
+            const optHandle = e.target.closest('.ai-option-handle');
+            if (qHandle) {
+                const card = qHandle.closest('.ai-preview-question');
+                if (card) {
+                    draggingQuestionCard = card;
+                    card.classList.add('dragging');
+                }
+            } else if (optHandle) {
+                const row = optHandle.closest('.ai-option-row');
+                if (row) {
+                    draggingOptionRow = row;
+                    row.classList.add('dragging');
+                }
+            }
+        });
+
+        aiPreviewQuestionContainer.addEventListener('dragend', () => {
+            if (draggingQuestionCard) {
+                draggingQuestionCard.classList.remove('dragging');
+                draggingQuestionCard = null;
+                renumberPreviewQuestions();
+            }
+            if (draggingOptionRow) {
+                const wrapper = draggingOptionRow.closest('.ai-preview-question');
+                if (wrapper) syncOptionsToTextarea(wrapper);
+                draggingOptionRow.classList.remove('dragging');
+                draggingOptionRow = null;
+            }
+        });
+
+        aiPreviewQuestionContainer.addEventListener('dragover', (e) => {
+            if (draggingQuestionCard) {
+                e.preventDefault();
+                const targetCard = e.target.closest('.ai-preview-question');
+                if (!targetCard || targetCard === draggingQuestionCard) return;
+                const rect = targetCard.getBoundingClientRect();
+                const after = e.clientY > rect.top + rect.height / 2;
+                if (after) {
+                    targetCard.after(draggingQuestionCard);
+                } else {
+                    targetCard.before(draggingQuestionCard);
+                }
+            } else if (draggingOptionRow) {
+                e.preventDefault();
+                const list = draggingOptionRow.closest('.ai-option-list');
+                if (!list) return;
+                const targetRow = e.target.closest('.ai-option-row');
+                if (!targetRow || targetRow === draggingOptionRow) return;
+                const rect = targetRow.getBoundingClientRect();
+                const after = e.clientY > rect.top + rect.height / 2;
+                if (after) {
+                    targetRow.after(draggingOptionRow);
+                } else {
+                    targetRow.before(draggingOptionRow);
+                }
+            }
+        });
+
+        aiPreviewQuestionContainer.addEventListener('input', (e) => {
+            if (e.target.classList.contains('ai-option-input')) {
+                const wrapper = e.target.closest('.ai-preview-question');
+                if (wrapper) syncOptionsToTextarea(wrapper);
+            }
+        });
+    }
+
+    if (aiPreviewTabs && aiPreviewTabs.length) {
+        aiPreviewTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const mode = tab.dataset.mode || 'edit';
+                setAiPreviewMode(mode);
+            });
+        });
+    }
+
+    function collectUpdatedQuestionsFromDom() {
+        const rows = aiPreviewQuestionContainer?.querySelectorAll('.ai-preview-question') || [];
+        const updatedQuestions = [];
+        rows.forEach((row, index) => {
+            const textInput = row.querySelector('.ai-q-text');
+            const typeSelect = row.querySelector('.ai-q-type');
+            const optionsTextarea = row.querySelector('.ai-q-options');
+            const requiredCheckbox = row.querySelector('.ai-q-required');
+            const maxSelInput = row.querySelector('.ai-q-maxselection');
+
+            const base = Array.isArray(aiGeneratedSurvey?.questions) ? aiGeneratedSurvey.questions[index] || {} : {};
+            const type = typeSelect?.value || base.type || 'text';
+            const text = textInput?.value?.trim() || base.text || `문항 ${index + 1}`;
+            let options = [];
+            if (type === 'radio' || type === 'checkbox') {
+                const raw = optionsTextarea?.value || '';
+                options = raw.split('\n').map(v => v.trim()).filter(Boolean);
+            }
+            const required = !!requiredCheckbox?.checked;
+
+            let maxSelection;
+            if (type === 'checkbox' && maxSelInput && maxSelInput.value) {
+                const n = parseInt(maxSelInput.value, 10);
+                if (Number.isFinite(n) && n > 0) {
+                    maxSelection = n;
+                }
+            }
+
+            updatedQuestions.push({
+                id: base.id || `q_${index + 1}`,
+                order: index + 1,
+                text,
+                type,
+                required,
+                options,
+                maxSelection
+            });
+        });
+        return updatedQuestions;
+    }
 
     function openAiModal() {
         if (aiGenModal) {
@@ -120,56 +418,44 @@ document.addEventListener("DOMContentLoaded", () => {
         aiPreviewModalTitle.textContent = aiGeneratedSurvey.title || '제목 없음';
         aiPreviewModalDesc.textContent = aiGeneratedSurvey.description || '설명 없음';
 
-        // 질문 목록 렌더링 (간단 편집 UI)
+        // 질문 목록 렌더링 (리스트형 편집 UI)
         const questions = Array.isArray(aiGeneratedSurvey.questions) ? aiGeneratedSurvey.questions : [];
         aiPreviewQuestionContainer.innerHTML = '';
 
         questions.forEach((q, index) => {
             const wrapper = document.createElement('div');
             wrapper.className = 'ai-preview-question';
-
-            const safeText = String(q.text || '').trim();
             const safeType = ['radio', 'checkbox', 'text'].includes(q.type) ? q.type : 'text';
             const safeOptions = Array.isArray(q.options) ? q.options.map(o => String(o)) : [];
-            const isRequired = q.required !== false;
+            wrapper.innerHTML = buildQuestionEditorHtml({
+                text: q.text,
+                type: safeType,
+                required: q.required,
+                options: safeOptions
+            }, index);
+            aiPreviewQuestionContainer.appendChild(wrapper);
+            setupQuestionOptionList(wrapper, safeOptions);
 
-            wrapper.innerHTML = `
-                <div class="form-group">
-                    <label>Q${index + 1}. 질문 내용</label>
-                    <input type="text" class="form-control ai-q-text" value="${safeText.replace(/"/g, '&quot;')}">
-                </div>
-                <div class="form-group">
-                    <label>질문 유형</label>
-                    <select class="form-control ai-q-type">
-                        <option value="radio" ${safeType === 'radio' ? 'selected' : ''}>객관식 (단일 선택)</option>
-                        <option value="checkbox" ${safeType === 'checkbox' ? 'selected' : ''}>객관식 (복수 선택)</option>
-                        <option value="text" ${safeType === 'text' ? 'selected' : ''}>서술형</option>
-                    </select>
-                </div>
-                <div class="form-group ai-q-options-group" ${safeType === 'text' ? 'style="display:none;"' : ''}>
-                    <label>보기 옵션 (줄바꿈으로 구분)</label>
-                    <textarea class="form-control ai-q-options" rows="3">${safeOptions.join('\n')}</textarea>
-                </div>
-                <div class="form-group" style="display:flex;align-items:center;gap:8px;">
-                    <input type="checkbox" class="ai-q-required" ${isRequired ? 'checked' : ''} />
-                    <span>필수 질문</span>
-                </div>
-            `;
-
-            // 유형 변경 시 옵션 영역 토글
             const typeSelect = wrapper.querySelector('.ai-q-type');
             const optionsGroup = wrapper.querySelector('.ai-q-options-group');
-            typeSelect.addEventListener('change', () => {
-                if (typeSelect.value === 'text') {
-                    optionsGroup.style.display = 'none';
-                } else {
-                    optionsGroup.style.display = '';
-                }
-            });
-
-            aiPreviewQuestionContainer.appendChild(wrapper);
+            const maxGroup = wrapper.querySelector('.ai-q-maxselection-group');
+            if (typeSelect && optionsGroup) {
+                typeSelect.addEventListener('change', () => {
+                    if (typeSelect.value === 'text') {
+                        optionsGroup.style.display = 'none';
+                        if (maxGroup) maxGroup.style.display = 'none';
+                    } else {
+                        optionsGroup.style.display = '';
+                        if (maxGroup) {
+                            maxGroup.style.display = typeSelect.value === 'checkbox' ? '' : 'none';
+                        }
+                    }
+                });
+            }
         });
 
+        renumberPreviewQuestions();
+        setAiPreviewMode('edit');
         aiPreviewModal.style.display = 'block';
         document.body.style.overflow = 'hidden';
     }
@@ -256,6 +542,42 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    async function saveAiSurveyDraftAndClose() {
+        if (!aiGeneratedSurvey) {
+            closeAiPreviewModal();
+            return;
+        }
+
+        const updatedQuestions = collectUpdatedQuestionsFromDom();
+        aiGeneratedSurvey.questions = updatedQuestions;
+
+        try {
+            const surveyId = `survey_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+            const now = new Date().toISOString();
+
+            currentSurveyId = surveyId;
+            lastCreatedSurveyId = surveyId;
+
+            await API.postSurvey({
+                survey_id: surveyId,
+                title: aiGeneratedSurvey.title || 'AI 생성 설문',
+                description: aiGeneratedSurvey.description || '',
+                questions: JSON.stringify(aiGeneratedSurvey.questions || []),
+                story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
+                status: 'draft',
+                created_at: now,
+                updated_at: now
+            });
+
+            alert('작성 중인 설문이 임시 저장되었습니다.');
+        } catch (err) {
+            console.error(err);
+            alert('임시 저장 중 오류가 발생했습니다.');
+        } finally {
+            closeAiPreviewModal();
+        }
+    }
+
     if (aiPreviewSaveBtn) {
         aiPreviewSaveBtn.addEventListener('click', async () => {
             if (!aiGeneratedSurvey) {
@@ -263,36 +585,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // 미리보기에서 수정된 값으로 질문 재구성
-            const rows = aiPreviewQuestionContainer?.querySelectorAll('.ai-preview-question') || [];
-            const updatedQuestions = [];
-
-            rows.forEach((row, index) => {
-                const textInput = row.querySelector('.ai-q-text');
-                const typeSelect = row.querySelector('.ai-q-type');
-                const optionsTextarea = row.querySelector('.ai-q-options');
-                const requiredCheckbox = row.querySelector('.ai-q-required');
-
-                const base = Array.isArray(aiGeneratedSurvey.questions) ? aiGeneratedSurvey.questions[index] || {} : {};
-                const type = typeSelect?.value || base.type || 'text';
-                const text = textInput?.value?.trim() || base.text || `문항 ${index + 1}`;
-                let options = [];
-                if (type === 'radio' || type === 'checkbox') {
-                    const raw = optionsTextarea?.value || '';
-                    options = raw.split('\n').map(v => v.trim()).filter(Boolean);
-                }
-                const required = !!requiredCheckbox?.checked;
-
-                updatedQuestions.push({
-                    id: base.id || `q_${index + 1}`,
-                    order: index + 1,
-                    text,
-                    type,
-                    required,
-                    options
-                });
-            });
-
+            const updatedQuestions = collectUpdatedQuestionsFromDom();
             aiGeneratedSurvey.questions = updatedQuestions;
 
             aiPreviewSaveBtn.disabled = true;
@@ -312,7 +605,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     description: aiGeneratedSurvey.description || '',
                     questions: JSON.stringify(aiGeneratedSurvey.questions || []),
                     story: aiGeneratedSurvey.story_context ? JSON.stringify(aiGeneratedSurvey.story_context) : null,
-                    status: 'draft',
+                    status: 'active',
                     created_at: now,
                     updated_at: now
                 });
@@ -338,6 +631,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 aiPreviewSaveBtn.disabled = false;
                 aiPreviewSaveBtn.textContent = prevText;
             }
+        });
+    }
+
+    if (aiPreviewCancelBtn) {
+        aiPreviewCancelBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await saveAiSurveyDraftAndClose();
+        });
+    }
+
+    if (aiPreviewClose) {
+        aiPreviewClose.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await saveAiSurveyDraftAndClose();
         });
     }
 
@@ -374,7 +682,9 @@ function importSurveysFromJSON(json) {
             else if (!['text','radio','checkbox','scale'].includes(type)) type = 'text';
             const required = q.required !== false;
             const options = Array.isArray(q.options) ? q.options.map(o => String(o)).filter(Boolean) : [];
-            return { id: qid, order, text, type, required, options };
+            const maxSelNum = q.maxSelection != null ? parseInt(q.maxSelection, 10) : NaN;
+            const maxSelection = Number.isFinite(maxSelNum) && maxSelNum > 0 ? maxSelNum : undefined;
+            return { id: qid, order, text, type, required, options, maxSelection };
         }).filter(q => q.text);
 
         await API.postSurvey({
@@ -583,6 +893,149 @@ function initEventListeners() {
         /* ✦ 설문 완성 버튼 */
         if (e.target.id === "completeSurvey") {
             handleCompleteSurvey();
+            return;
+        }
+
+        /* ✦ AI 미리보기: 질문 삭제 */
+        if (e.target.closest('.ai-q-delete')) {
+            const card = e.target.closest('.ai-preview-question');
+            if (card) {
+                card.remove();
+                if (typeof renumberPreviewQuestions === 'function') {
+                    renumberPreviewQuestions();
+                }
+            }
+            return;
+        }
+
+        /* ✦ AI 미리보기: 질문 복제 */
+        if (e.target.closest('.ai-q-duplicate')) {
+            const card = e.target.closest('.ai-preview-question');
+            if (card && aiPreviewQuestionContainer) {
+                const clone = card.cloneNode(true);
+                aiPreviewQuestionContainer.appendChild(clone);
+                if (typeof renumberPreviewQuestions === 'function') {
+                    renumberPreviewQuestions();
+                }
+            }
+            return;
+        }
+
+        /* ✦ AI 미리보기: 새 질문 추가 */
+        if (e.target.id === 'aiAddQuestionBtn') {
+            if (aiPreviewQuestionContainer) {
+                const index = aiPreviewQuestionContainer.querySelectorAll('.ai-preview-question').length;
+                const wrapper = document.createElement('div');
+                wrapper.className = 'ai-preview-question';
+                const q = { text: '', type: 'radio', required: true, options: [] };
+                wrapper.innerHTML = buildQuestionEditorHtml(q, index);
+                aiPreviewQuestionContainer.appendChild(wrapper);
+                setupQuestionOptionList(wrapper, q.options);
+                if (typeof renumberPreviewQuestions === 'function') {
+                    renumberPreviewQuestions();
+                }
+            }
+            return;
+        }
+
+        /* ✦ AI 미리보기: 옵션 한 줄 추가 */
+        if (e.target.closest('.ai-add-option-row')) {
+            const group = e.target.closest('.ai-q-options-group');
+            if (group) {
+                const list = group.querySelector('.ai-option-list');
+                if (list) {
+                    const row = document.createElement('div');
+                    row.className = 'ai-option-row';
+                    row.innerHTML = `
+                        <span class="ai-option-handle" draggable="true" title="보기 순서 변경">≡</span>
+                        <input type="text" class="form-control ai-option-input" />
+                        <button type="button" class="btn-icon ai-option-delete">🗑️</button>
+                    `;
+                    list.appendChild(row);
+                    if (typeof syncOptionsToTextarea === 'function') {
+                        const wrapper = group.closest('.ai-preview-question');
+                        if (wrapper) syncOptionsToTextarea(wrapper);
+                    }
+                }
+            }
+            return;
+        }
+
+        /* ✦ AI 미리보기: 옵션 삭제 */
+        if (e.target.closest('.ai-option-delete')) {
+            const row = e.target.closest('.ai-option-row');
+            if (row) {
+                const wrapper = row.closest('.ai-preview-question');
+                row.remove();
+                if (wrapper && typeof syncOptionsToTextarea === 'function') {
+                    syncOptionsToTextarea(wrapper);
+                }
+            }
+            return;
+        }
+
+        /* ✦ AI 미리보기: 일괄 입력 모드 토글 */
+        if (e.target.closest('.ai-bulk-toggle')) {
+            const group = e.target.closest('.ai-q-options-group');
+            if (group) {
+                const bulk = group.querySelector('.ai-bulk-editor');
+                const textareaBulk = group.querySelector('.ai-bulk-text');
+                const hidden = group.querySelector('.ai-q-options');
+                const wrapper = group.closest('.ai-preview-question');
+                if (bulk && textareaBulk && hidden && wrapper) {
+                    if (typeof syncOptionsToTextarea === 'function') {
+                        syncOptionsToTextarea(wrapper);
+                    }
+                    textareaBulk.value = hidden.value;
+                    bulk.style.display = bulk.style.display === 'none' || !bulk.style.display ? 'block' : 'none';
+                }
+            }
+            return;
+        }
+
+        /* ✦ AI 미리보기: 일괄 입력 취소 */
+        if (e.target.closest('.ai-bulk-cancel')) {
+            const bulk = e.target.closest('.ai-bulk-editor');
+            if (bulk) bulk.style.display = 'none';
+            return;
+        }
+
+        /* ✦ AI 미리보기: 일괄 입력 적용 */
+        if (e.target.closest('.ai-bulk-apply')) {
+            const bulk = e.target.closest('.ai-bulk-editor');
+            if (bulk) {
+                const group = bulk.closest('.ai-q-options-group');
+                const textareaBulk = bulk.querySelector('.ai-bulk-text');
+                const list = group?.querySelector('.ai-option-list');
+                const wrapper = bulk.closest('.ai-preview-question');
+                if (group && textareaBulk && list) {
+                    list.innerHTML = '';
+                    const lines = textareaBulk.value.split('\n').map(v => v.trim()).filter(Boolean);
+                    if (lines.length === 0) {
+                        lines.push('');
+                    }
+                    lines.forEach(text => {
+                        const row = document.createElement('div');
+                        row.className = 'ai-option-row';
+                        row.innerHTML = `
+                            <span class="ai-option-handle" draggable="true" title="보기 순서 변경">≡</span>
+                            <input type="text" class="form-control ai-option-input" value="${escapeHtml(text)}" />
+                            <button type="button" class="btn-icon ai-option-delete">🗑️</button>
+                        `;
+                        list.appendChild(row);
+                    });
+                    if (wrapper && typeof syncOptionsToTextarea === 'function') {
+                        syncOptionsToTextarea(wrapper);
+                    }
+                }
+                bulk.style.display = 'none';
+            }
+            return;
+        }
+
+        /* ✦ AI 미리보기: AI로 질문 다시 쓰기 (플레이스홀더) */
+        if (e.target.closest('.ai-q-ai-rewrite')) {
+            alert('"AI로 질문 다듬기" 기능은 서버의 추가 AI API가 필요합니다. 현재는 준비 중입니다.');
             return;
         }
     });

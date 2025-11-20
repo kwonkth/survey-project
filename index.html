@@ -212,10 +212,22 @@
                 <h3 id="aiPreviewModalTitle">-</h3>
                 <p id="aiPreviewModalDesc">-</p>
             </div>
-            <div id="aiPreviewQuestionContainer" class="ai-preview-questions"></div>
+            <div class="ai-preview-tabs">
+                <button type="button" class="ai-preview-tab active" data-mode="edit">편집 모드</button>
+                <button type="button" class="ai-preview-tab" data-mode="preview">미리보기</button>
+            </div>
+            <div class="ai-preview-body">
+                <div id="aiPreviewEditPanel" class="ai-preview-edit-panel">
+                    <div id="aiPreviewQuestionContainer" class="ai-preview-questions"></div>
+                    <div class="ai-preview-add-question">
+                        <button type="button" class="btn btn-outline" id="aiAddQuestionBtn">+ 새 질문 추가</button>
+                    </div>
+                </div>
+                <div id="aiPreviewLivePanel" class="ai-preview-live-panel" style="display:none;"></div>
+            </div>
             <div class="form-actions ai-preview-actions">
                 <button class="btn btn-secondary" id="aiPreviewCancelBtn">닫기</button>
-                <button class="btn btn-primary" id="aiPreviewSaveBtn">수정 내용 저장</button>
+                <button class="btn btn-primary" id="aiPreviewSaveBtn">설문 시작</button>
             </div>
         </div>
     </div>
