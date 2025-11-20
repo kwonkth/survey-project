@@ -824,6 +824,44 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = page;
     }
 
+    async function setAllSurveysActive() {
+        try {
+            // 최신 데이터 보장
+            await refreshSurveys();
+            const ids = state.surveys.map(s => s.id);
+            if (!ids.length) {
+                alert('변경할 설문이 없습니다.');
+                return;
+            }
+
+            const confirmMsg = `총 ${ids.length}개 설문을 모두 '배포 중' 상태로 변경하시겠습니까?`;
+            const proceed = window.confirm(confirmMsg);
+            if (!proceed) return;
+
+            await Promise.all(ids.map(async (id) => {
+                try {
+                    await API.updateSurveyStatus(id, 'active');
+                    const s = state.surveyMap.get(id);
+                    if (s) {
+                        s.status = 'active';
+                        s.updatedAt = new Date().toISOString();
+                    }
+                } catch (e) {
+                    console.error('상태 변경 실패:', id, e);
+                }
+            }));
+
+            renderFolders();
+            renderSurveys();
+            updateAnalytics();
+
+            alert(`총 ${ids.length}개 설문의 상태를 '배포 중'으로 변경했습니다.`);
+        } catch (e) {
+            console.error('전체 설문 상태 일괄 변경 중 오류', e);
+            alert('전체 설문 상태를 변경하는 중 오류가 발생했습니다.');
+        }
+    }
+
     // Expose functions for inline onclick (kebab, share, navigation, filters)
     window.openSurveyMenu = openSurveyMenu;
     window.shareSurvey = shareSurvey;
@@ -842,6 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.openMoveFolderModal = openMoveFolderModal;
     window.closeMoveFolderModal = closeMoveFolderModal;
     window.applyMoveFolder = applyMoveFolder;
+    window.setAllSurveysActive = setAllSurveysActive;
     // exports removed
 
     // 배포 종료 / 재배포 버튼 클릭 처리 (이벤트 위임)
