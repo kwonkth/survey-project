@@ -484,6 +484,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const options = {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: state.optionChartType === 'bar'
+          ? { top: 16, right: 32, bottom: 24, left: 32 }
+          : { top: 24, right: 40, bottom: 32, left: 40 }
+      },
       plugins: {
         legend: {
           display: false
@@ -585,7 +590,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const color = getIndexedColor(idx);
       return `
       <tr>
-        <td><span class="option-color-dot" style="background-color:${color};"></span>${escapeHTML(o.label)}</td>
+        <td>
+          <span class="option-label">
+            <span class="option-color-dot" style="background-color:${color};"></span>
+            <span class="option-label-text">${escapeHTML(o.label)}</span>
+          </span>
+        </td>
         <td style="text-align:right;">${o.count}</td>
         <td style="text-align:right;">${o.percent}%</td>
       </tr>`;
