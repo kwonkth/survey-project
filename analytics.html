@@ -110,7 +110,7 @@
       <div id="analyticsOutput" style="display:none;"></div>
     </main>
     <footer class="app-footer">
-      <small> 2024 .</small>
+      <small>© 2024 설문 마법사 · 결과 분석 페이지 푸터(더미 텍스트)</small>
     </footer>
   </div>
 
@@ -617,6 +617,14 @@
         width: 120px;
         max-width: 100%;
         align-self: flex-start;
+      }
+
+      /* 모바일에서는 내보내기 드롭다운을 화면 상단 오른쪽에 고정 오버레이로 표시 */
+      .analytics-page .export-menu {
+        position: fixed;
+        top: 96px;   /* 고정 헤더보다 충분히 아래에 위치시키기 */
+        right: 12px; /* 화면 오른쪽에 약간 여백 두고 배치 */
+        z-index: 1000;
       }
 
       .analytics-page .option-stats-table {

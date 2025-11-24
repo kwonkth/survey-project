@@ -71,6 +71,7 @@ body {
     flex-direction: column;
     min-height: 100%;
     width: 100%;
+    padding-top: 64px; /* 고정 헤더 높이만큼 본문을 아래로 내려 겹치지 않도록 */
 }
 
 .app-footer {
@@ -107,8 +108,10 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 200;
 }
 
@@ -1243,6 +1246,65 @@ textarea.form-control {
     #chart2 {
         max-width: 100%;
         height: auto !important;
+    }
+
+    /* Creation wizard (index.html) mobile layout fixes to prevent horizontal overflow */
+    .creation-steps {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem 1rem;
+        row-gap: 0.5rem;
+    }
+    .creation-steps .step {
+        text-align: left;
+        padding: 0.4rem 0;
+    }
+    /* 모바일에서는 상단 진행선은 과감히 숨겨서 폭을 안정화 */
+    .creation-steps .step:not(:last-child)::after {
+        display: none;
+    }
+    .step-content {
+        padding: 1rem;
+    }
+
+    .ai-preview-modal {
+        padding: 1.25rem 1rem;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .ai-preview-question {
+        padding: 1rem 0.9rem;
+    }
+
+    .avatar-selection,
+    .theme-selection {
+        justify-content: flex-start;
+    }
+    .avatar-option,
+    .theme-option {
+        flex: 0 0 calc(33.333% - 0.75rem);
+        max-width: calc(33.333% - 0.75rem);
+        box-sizing: border-box;
+    }
+    .avatar-option img {
+        width: 100%;
+        height: auto;
+        max-width: 80px;
+    }
+    .theme-preview {
+        width: 100%;
+        max-width: 120px;
+    }
+
+    .answer-option {
+        flex-wrap: nowrap;
+    }
+    .answer-option .form-control {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .answer-option .btn-icon {
+        flex: 0 0 auto;
     }
 }
 
