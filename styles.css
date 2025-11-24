@@ -1167,6 +1167,8 @@ textarea.form-control {
     .dashboard-grid {
         grid-template-columns: 1fr;
         width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .new-survey {
