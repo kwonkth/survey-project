@@ -477,10 +477,15 @@
 
       .analytics-page .chart-area {
         min-height: 220px;
+        display: flex;
+        justify-content: flex-start; /* 도넛을 카드의 왼쪽으로 정렬 */
       }
       .analytics-page .chart-canvas-wrap {
         height: 220px;
         overflow-x: hidden; /* 모바일에서는 가로 스크롤 제거 */
+        width: 100%;
+        max-width: 100%;
+        margin-right: auto; /* flex 컨테이너 내에서 왼쪽에 고정 */
       }
       .analytics-page .chart-canvas-wrap canvas {
         min-width: 0;
