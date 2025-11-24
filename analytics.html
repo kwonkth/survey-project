@@ -344,6 +344,10 @@
       gap: 1rem;
       align-items: flex-start;
     }
+    /* 차트/테이블 카드 최소 높이 유지 */
+    .analytics-page #overallDoughnutContainer {
+      min-height: 360px;
+    }
     .analytics-page .chart-area {
       min-height: 300px;
       display: flex;
@@ -355,6 +359,10 @@
     }
     .analytics-page .chart-canvas-wrap canvas {
       min-width: 0; /* 고정 폭을 제거해 작은 화면에서도 가로 슬라이드가 생기지 않도록 */
+    }
+    /* 선택지 표 영역 최소 높이 */
+    .analytics-page .table-area {
+      min-height: 180px;
     }
 
     /* Ensure chart area and canvas never overflow their parent width */
@@ -400,6 +408,16 @@
       margin-top: 0.35rem;
       font-size: 0.8rem;
       color: #6b7280;
+    }
+
+    /* 선택지 없음(Empty) 메시지를 가운데 위치시키기 */
+    .analytics-page .empty-state {
+      min-height: 160px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #6b7280;
+      font-size: 0.9rem;
     }
 
     .analytics-page .option-color-dot {
@@ -498,6 +516,9 @@
 
       .analytics-page .analytics-toolbar {
         gap: 0.5rem;
+        flex-direction: column;   /* 모바일에서는 설문/문항/응답기간을 위→아래로 세로 배치 */
+        align-items: stretch;
+        width: 100%;
       }
       .analytics-page .analytics-toolbar label {
         font-size: 0.85rem;
