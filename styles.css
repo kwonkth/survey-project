@@ -1200,12 +1200,12 @@ textarea.form-control {
 
     .dashboard-grid {
         grid-template-columns: 1fr;
-        width: 100%;
-        /* 컨테이너보다 약간 좁게 잡고, 왼쪽 정렬하여 오른쪽에 여유 공간을 남김 */
-        max-width: 94%;
+        /* 부모 전체 폭을 강제로 쓰지 않고, 모바일에서 의도적으로 더 좁게 사용 */
+        width: 90%;
+        max-width: 90%;
         box-sizing: border-box;
         margin-left: 0;
-        margin-right: auto;
+        margin-right: auto; /* 왼쪽 정렬, 오른쪽에 항상 여백 남김 */
     }
 
     .new-survey {
