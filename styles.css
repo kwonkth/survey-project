@@ -1207,12 +1207,12 @@ textarea.form-control {
 
     .dashboard-grid {
         grid-template-columns: 1fr;
-        /* 부모 전체 폭을 강제로 쓰지 않고, 모바일에서 의도적으로 더 좁게 사용 */
-        width: 90%;
-        max-width: 90%;
+        /* 뷰포트 기준으로 좌우 20px 여백을 항상 유지 (680px 여부와 무관하게 동작) */
+        width: calc(100vw - 40px);
+        max-width: calc(100vw - 40px);
         box-sizing: border-box;
-        margin-left: 0;
-        margin-right: auto; /* 왼쪽 정렬, 오른쪽에 항상 여백 남김 */
+        margin-left: auto;
+        margin-right: auto; /* 가운데 정렬 → 좌우 여백 대칭 유지 */
     }
 
     .new-survey {
