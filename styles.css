@@ -21,7 +21,8 @@
     position: relative;
     background-color: white;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    overflow-x: hidden;  /* 가로 스크롤만 막고 */
+    overflow-y: auto;    /* 세로 스크롤은 허용해서 푸터까지 도달 가능하게 */
 }
 
 /* Mobile viewport */
