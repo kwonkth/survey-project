@@ -1201,9 +1201,10 @@ textarea.form-control {
     .dashboard-grid {
         grid-template-columns: 1fr;
         width: 100%;
-        max-width: 96%; /* 컨테이너보다 약간 좁게 잡아 좌우에 동일한 여백을 생성 */
+        /* 컨테이너보다 약간 좁게 잡고, 왼쪽 정렬하여 오른쪽에 여유 공간을 남김 */
+        max-width: 94%;
         box-sizing: border-box;
-        margin-left: auto;
+        margin-left: 0;
         margin-right: auto;
     }
 
