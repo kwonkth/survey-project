@@ -138,6 +138,13 @@
             padding: 2rem;
         }
 
+        /* 설문 리스트 컨테이너가 항상 전체 폭을 유지하도록 고정 */
+        #surveyListContainer {
+            width: 100%;
+            min-width: 100%;
+            min-height: 260px; /* 카드가 없을 때도 기본 높이 유지 */
+        }
+
         .survey-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -148,9 +155,9 @@
         }
         .survey-grid-empty {
             grid-column: 1 / -1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 100%;
+            padding: 40px 0;
+            text-align: center;
             color: #7f8c8d;
             font-size: 0.9rem;
         }
