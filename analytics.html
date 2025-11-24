@@ -75,10 +75,11 @@
           <div class="chart-card-header">
             <div>
               <h3>선택한 문항 – 선택지 분포</h3>
-              <p id="selectedQuestionTitle" style="margin:0 0 0.25rem 0; font-weight:600; color:#2c3e50;"></p>
-              <p id="selectedQuestionTotal" style="margin:0 0 0.75rem 0; font-size:0.9rem; color:#555;"></p>
+              <p id="selectedQuestionTitle" class="chart-question-title chart-question-title-main" style="margin:0 0 0.25rem 0;"></p>
+              <p id="selectedQuestionSubTitle" class="chart-question-title chart-question-title-sub" style="margin:0 0 0.25rem 0;"></p>
             </div>
             <div class="chart-header-controls">
+              <span id="selectedQuestionTotal" class="response-badge"></span>
               <div class="chart-type-toggle" aria-label="차트 유형 선택">
                 <button type="button" class="chart-type-btn active" data-type="doughnut">도넛</button>
                 <button type="button" class="chart-type-btn" data-type="bar">막대</button>
@@ -202,6 +203,30 @@
       font-size: 1.25rem;
       font-weight: 700;
       color: #111827;
+    }
+
+    /* Question title hierarchy in chart header */
+    .analytics-page .chart-question-title-main {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #111827;
+    }
+    .analytics-page .chart-question-title-sub {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-left: 0.25rem;
+    }
+
+    /* Total responses badge next to chart type toggle */
+    .analytics-page .response-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4a6baf;
+      font-size: 0.8rem;
+      margin-right: 0.5rem;
     }
 
     /* Chart header + chart type toggle */

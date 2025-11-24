@@ -448,11 +448,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderOptionChart(surveyId, questionId){
     const ctx = document.getElementById('chart2');
     const optionEmpty = document.getElementById('optionEmpty');
+    const zeroNote = document.querySelector('.chart-zero-note');
     if (!ctx) return;
     const { labels, counts } = getAnswerDistribution(surveyId, questionId);
     if (!labels.length) {
       if (state.doughnutChart) { state.doughnutChart.destroy(); state.doughnutChart = null; }
       if (optionEmpty) optionEmpty.style.display = 'block';
+      if (zeroNote) zeroNote.style.display = 'none';
       renderOptionStatsTable(surveyId, questionId, [], []);
       return;
     }
@@ -479,16 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          display: chartType === 'bar' ? false : true,
-          position: 'bottom',
-          onClick: (evt, legendItem, legend) => {
-            const index = legendItem.index;
-            const ci = legend.chart;
-            if (ci && typeof ci.toggleDataVisibility === 'function') {
-              ci.toggleDataVisibility(index);
-              ci.update();
-            }
-          }
+          display: false
         },
         tooltip: {
           callbacks: {
@@ -503,22 +496,30 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         },
         datalabels: {
-          color: '#333',
-          font: { weight: '700', size: 13 },
-          anchor: chartType === 'bar' ? 'end' : 'center',
-          align: chartType === 'bar' ? 'end' : 'center',
+          color: '#111827',
+          font: { weight: '600', size: 11 },
+          anchor: 'end',
+          align: 'end',
+          offset: chartType === 'bar' ? 4 : 12,
+          clamp: true,
+          clip: false,
           formatter: (value, context) => {
             const idx = context.dataIndex;
+            const label = labels[idx] || '';
             const valNum = rawCounts[idx] || 0;
-            if (!total) {
-              return `${valNum}명 (0%)`;
-            }
+            if (!total) return label;
             const pct = Math.round((valNum / total) * 100);
-            return `${valNum}명 (${pct}%)`;
+            return `${label} (${pct}%)`;
           }
         }
       }
     };
+
+    // 회색 막대 안내 문구는 실제로 0 응답 막대가 있는 경우에만 표시
+    if (zeroNote) {
+      const hasZero = chartType === 'bar' && rawCounts.some(v => (typeof v === 'number' ? v : Number(v) || 0) === 0);
+      zeroNote.style.display = hasZero ? 'block' : 'none';
+    }
 
     if (chartType === 'bar') {
       options.scales = {
@@ -655,9 +656,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (titleEl) {
       const base = `Q${q.number}. ${q.text || ''}`;
+      const safeBase = escapeHTML(base);
       const t = String(q.type || '').toLowerCase();
       const isMulti = t === 'checkbox' || /checkbox|복수|다중|체크/.test(t);
-      titleEl.textContent = isMulti ? `${base} (복수 선택 가능)` : base;
+      if (isMulti) {
+        titleEl.innerHTML = `<span class="chart-question-title-main">${safeBase}</span><span class="chart-question-title-sub"> (복수 선택 가능)</span>`;
+      } else {
+        titleEl.innerHTML = `<span class="chart-question-title-main">${safeBase}</span>`;
+      }
     }
     if (totalEl) {
       const total = typeof q.respondedCount === 'number' ? q.respondedCount : 0;
