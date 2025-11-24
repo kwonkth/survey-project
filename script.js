@@ -1887,9 +1887,18 @@ async function renderMainDashboard() {
             ? Math.round(totalQuestionsAll / metaSurveys.length)
             : 0;
 
-        const latest = enriched
+        // 응답 수가 가장 많은 설문을 기준으로 도넛 차트에 표시한다.
+        const topByResponses = enriched
             .slice()
-            .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))[0] || null;
+            .sort((a, b) => {
+                if (b.responsesCount !== a.responsesCount) {
+                    return b.responsesCount - a.responsesCount;
+                }
+                // 응답 수가 같다면, 더 최근에 수정된 설문을 우선
+                return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+            })[0] || null;
+
+        const latest = topByResponses;
         const latestResponses = latest ? (responsesById[latest.id] || []) : [];
 
         if (stats) {
@@ -1912,7 +1921,7 @@ async function renderMainDashboard() {
                     </div>
                     <div class="latest-survey-card">
                         <div class="latest-survey-header">
-                            <div class="latest-survey-title">최근 설문</div>
+                            <div class="latest-survey-title">최다 응답 설문</div>
                         </div>
                         <div class="latest-survey-meta">
                             <div id="latestSurveyTitle">설문 제목: -</div>

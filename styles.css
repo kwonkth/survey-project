@@ -1161,7 +1161,8 @@ textarea.form-control {
     }
 
     .dashboard {
-        padding: 1rem;
+        /* 모바일에서 메인 콘텐츠 오른쪽에 여백을 조금 더 주어, 시각적으로 좌우가 꽉 차 보이지 않도록 조정 */
+        padding: 1rem 1.25rem 1rem 1rem;
     }
 
     .dashboard-grid {
