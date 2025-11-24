@@ -158,9 +158,8 @@
       flex-wrap: wrap;
       width: 100%;
       max-width: 100%;
-      /* 가로 스크롤만 막고, 세로로는 드롭다운 메뉴가 자연스럽게 펼쳐지도록 */
-      overflow-x: hidden;
-      overflow-y: visible;
+      /* 드롭다운 메뉴가 카드 밖으로 자연스럽게 오버레이되도록 오버플로우를 잘라내지 않음 */
+      overflow: visible;
     }
     .analytics-page .analytics-filter-group {
       display: flex;

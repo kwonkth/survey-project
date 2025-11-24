@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function computeSurveyStats(survey, responses) {
-    const total = responses.length;
+    const total = responses.length; // 설문에 응답한 "인원" 수
     const qListRaw = Array.isArray(survey.questions) ? survey.questions : [];
     const qList = qListRaw.filter(q => !isNameQuestion(q));
     const completionRate = calcCompletionRate(survey, responses);
@@ -110,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Build distribution
       let dist = [];
       let textAnswers = [];
+      let totalVotes = 0; // 이 문항에 대한 전체 "투표 수" (멀티 선택 포함)
       if (q.type && (q.type === 'radio' || q.type === 'checkbox' || /객관식/.test(q.type))) {
         // Collect options (support objects or primitives)
         const options = toOptionArray(q.options);
@@ -123,14 +124,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 // match by value or by label text
                 const match = options.find(o => String(o.value) === key || String(o.label) === key);
                 const k = match ? String(match.value) : key;
-                counts.set(k, (counts.get(k) || 0) + 1);
+                const next = (counts.get(k) || 0) + 1;
+                counts.set(k, next);
               });
             }
           });
         });
         dist = options.map(o => {
-          const count = counts.get(String(o.value)) || 0;
-          const percent = answered ? Math.round((count / answered) * 100) : 0;
+          const count = counts.get(String(o.value)) || 0; // 이 선택지에 대한 "투표 수"
+          const percent = answered ? Math.round((count / answered) * 100) : 0; // 응답 인원 기준 비율 (기존 로직 유지)
+          totalVotes += count;
           return { label: o.label, count, percent };
         });
       } else {
@@ -151,9 +154,10 @@ document.addEventListener('DOMContentLoaded', () => {
         number: idx + 1,
         text: q.text || `질문 ${idx + 1}`,
         type: q.type || '',
-        respondedCount: answered,
+        respondedCount: answered, // 이 문항에 응답한 "인원" 수
         dropoffRate,
         options: dist,
+        totalVotes,               // 이 문항의 전체 "투표 수"
         textAnswers
       };
     });
@@ -498,10 +502,10 @@ document.addEventListener('DOMContentLoaded', () => {
             label: (context) => {
               const label = context.label || '';
               const idx = context.dataIndex;
-              const value = rawCounts[idx] || 0;
-              if (!total) return `${label} - ${value}명`;
+              const value = rawCounts[idx] || 0; // 이 선택지에 대한 "투표 수"
+              if (!total) return `${label} - ${value}표`;
               const pct = Math.round((value / total) * 100);
-              return `${label} - ${value}명 (${pct}%)`;
+              return `${label} - ${value}표 (${pct}%)`;
             }
           }
         },
@@ -693,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <thead>
           <tr>
             <th style="text-align:left;">선택지</th>
-            <th style="text-align:right;">응답 수(명)</th>
+            <th style="text-align:right;">투표 수(건)</th>
             <th style="text-align:right;">비율(%)</th>
           </tr>
         </thead>
@@ -716,7 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const totalResponses = stats.totalResponses || 0;
+    const totalResponses = stats.totalResponses || 0; // 설문 전체 응답 "인원" 수
     if (surveyTotalEl) surveyTotalEl.textContent = `${totalResponses}건`;
 
     if (!q) {
@@ -730,8 +734,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!best) return curr;
         return (curr.count || 0) > (best.count || 0) ? curr : best;
       }, null);
+
       if (topOpt && (topOpt.count || 0) > 0) {
-        topLabel = `${topOpt.label} – ${topOpt.percent}%`;
+        const t = String(q.type || '').toLowerCase();
+        const isMulti = t === 'checkbox' || /checkbox|복수|다중|체크/.test(t);
+        const totalVotes = typeof q.totalVotes === 'number'
+          ? q.totalVotes
+          : q.options.reduce((sum, o) => sum + (o.count || 0), 0);
+        const votePct = totalVotes > 0 ? Math.round((topOpt.count / totalVotes) * 100) : 0;
+        const basePct = typeof topOpt.percent === 'number' ? topOpt.percent : votePct;
+        const displayPct = isMulti ? votePct : basePct;
+        topLabel = `${topOpt.label} – ${displayPct}%`;
       }
     }
     if (topEl) topEl.textContent = topLabel;
@@ -768,8 +781,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     if (totalEl) {
-      const total = typeof q.respondedCount === 'number' ? q.respondedCount : 0;
-      totalEl.textContent = `총 응답: ${total}건`;
+      const responded = typeof q.respondedCount === 'number' ? q.respondedCount : 0; // 이 문항에 응답한 인원 수
+      const totalVotes = typeof q.totalVotes === 'number' ? q.totalVotes : 0;       // 이 문항의 전체 투표 수
+      const hasChoices = Array.isArray(q.options) && q.options.length > 0;
+      if (hasChoices && totalVotes > 0) {
+        // 객관식/복수 선택 문항: 총 응답은 "투표 수", 괄호 안에 투표 인원수 표기
+        totalEl.textContent = `총 응답: ${totalVotes}표 (투표 인원수 ${responded}명)`;
+      } else {
+        // 기타 문항: 응답 인원만 표시
+        totalEl.textContent = `응답 인원: ${responded}명`;
+      }
     }
   }
 
