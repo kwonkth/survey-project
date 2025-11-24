@@ -506,20 +506,114 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         },
         datalabels: {
-          color: '#111827',
           font: { weight: '600', size: 11 },
-          anchor: 'end',
-          align: 'end',
-          offset: chartType === 'bar' ? 4 : 12,
           clamp: true,
           clip: false,
+          display: (context) => {
+            const idx = context.dataIndex;
+            const valNum = rawCounts[idx] || 0;
+            if (!total || valNum <= 0) return false;
+            const pct = Math.round((valNum / total) * 100);
+            const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+            if (ct === 'doughnut') {
+              // 0% 및 매우 작은 조각(<=5%)은 숨김
+              if (pct <= 5) return false;
+              return true;
+            }
+            return true;
+          },
+          color: (context) => {
+            const idx = context.dataIndex;
+            const valNum = rawCounts[idx] || 0;
+            if (!total || valNum <= 0) return 'transparent';
+            const pct = Math.round((valNum / total) * 100);
+            const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+            if (ct === 'doughnut' && pct >= 15) {
+              // 큰 조각: 도넛 내부 흰색 텍스트
+              return '#ffffff';
+            }
+            return '#111827';
+          },
+          textStrokeColor: (context) => {
+            const idx = context.dataIndex;
+            const valNum = rawCounts[idx] || 0;
+            if (!total || valNum <= 0) return 'transparent';
+            const pct = Math.round((valNum / total) * 100);
+            const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+            if (ct === 'doughnut' && pct >= 15) {
+              return 'rgba(15,23,42,0.7)';
+            }
+            return 'transparent';
+          },
+          textStrokeWidth: (context) => {
+            const idx = context.dataIndex;
+            const valNum = rawCounts[idx] || 0;
+            if (!total || valNum <= 0) return 0;
+            const pct = Math.round((valNum / total) * 100);
+            const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+            if (ct === 'doughnut' && pct >= 15) {
+              return 2;
+            }
+            return 0;
+          },
+          anchor: (context) => {
+            const idx = context.dataIndex;
+            const valNum = rawCounts[idx] || 0;
+            if (!total || valNum <= 0) return 'center';
+            const pct = Math.round((valNum / total) * 100);
+            const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+            if (ct === 'doughnut') {
+              // 큰 조각은 도넛 안쪽, 작은 조각은 바깥쪽
+              return pct >= 15 ? 'center' : 'end';
+            }
+            return 'end';
+          },
+          align: (context) => {
+            const idx = context.dataIndex;
+            const valNum = rawCounts[idx] || 0;
+            if (!total || valNum <= 0) return 'center';
+            const pct = Math.round((valNum / total) * 100);
+            const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+            if (ct === 'doughnut') {
+              return pct >= 15 ? 'center' : 'end';
+            }
+            return 'end';
+          },
+          offset: (context) => {
+            const idx = context.dataIndex;
+            const valNum = rawCounts[idx] || 0;
+            if (!total || valNum <= 0) return 0;
+            const pct = Math.round((valNum / total) * 100);
+            const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+            if (ct === 'doughnut') {
+              if (pct >= 15) return 0; // 내부 퍼센트
+              // 작은 조각: 바깥쪽 라벨, 다섯 번째 조각은 살짝 더 띄워줌
+              let base = 14;
+              if (idx === 4) base += 6;
+              return base;
+            }
+            return 4; // 막대 그래프 상단 약간 띄우기
+          },
           formatter: (value, context) => {
             const idx = context.dataIndex;
             const label = labels[idx] || '';
             const valNum = rawCounts[idx] || 0;
-            if (!total) return label;
+            if (!total || valNum <= 0) return '';
             const pct = Math.round((valNum / total) * 100);
-            return `${label} (${pct}%)`;
+            const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
+
+            if (ct === 'doughnut') {
+              // 0% 및 매우 작은 조각(<=5%)은 display 단계에서 이미 숨김
+              if (pct < 15) {
+                // 작은 조각: 바깥쪽에 옵션명 + 응답 수 표기
+                return `${label} (${valNum}명)`;
+              }
+              // 큰 조각: 도넛 내부에 퍼센트만
+              return `${pct}%`;
+            }
+
+            // 막대그래프: 라벨 + 응답 수 + 퍼센트
+            return `${label} (${valNum}명, ${pct}%)`;
           }
         }
       }
