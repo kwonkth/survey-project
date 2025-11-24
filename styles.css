@@ -1354,3 +1354,38 @@ textarea.form-control {
 .fade-in {
     animation: fadeIn 0.3s ease-out forwards;
 }
+
+/* ===== Layout Debug Outlines (TEMPORARY) ===== */
+/* iOS에서 어떤 컨테이너가 오른쪽으로 삐져나오는지 확인하기 위한 디버그용 스타일입니다. */
+html {
+    outline: 2px solid red;
+}
+
+body {
+    outline: 2px solid blue;
+}
+
+.mobile-container {
+    outline: 2px solid green;
+}
+
+.app-container {
+    outline: 2px solid orange;
+}
+
+.dashboard {
+    outline: 2px solid purple;
+}
+
+.dashboard-grid {
+    outline: 2px solid brown;
+}
+
+.new-survey {
+    outline: 2px dashed magenta;
+}
+
+.latest-survey-card {
+    outline: 2px dashed #00bcd4;
+}
+
