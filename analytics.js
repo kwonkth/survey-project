@@ -44,7 +44,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!sel) return;
     sel.innerHTML = '';
     const meta = state.surveys.find(s => s.id === surveyId);
-    if (!meta) { sel.disabled = true; return; }
+    if (!meta) {
+      sel.disabled = true;
+      sel.innerHTML = '<option value="">설문을 먼저 선택해주세요</option>';
+      return;
+    }
     const eligible = (meta.questions || []).filter(q => {
       const opts = toOptionArray(q.options);
       return !isNameQuestion(q) && opts.length > 0;
@@ -52,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (eligible.length === 0) {
       sel.disabled = true;
       setOptionEmpty(true);
+      sel.innerHTML = '<option value="">표시할 수 있는 문항이 없습니다</option>';
       return;
     }
     sel.disabled = false;
