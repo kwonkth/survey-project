@@ -1210,6 +1210,7 @@ textarea.form-control {
         /* 뷰포트 기준으로 좌우 20px 여백을 항상 유지 (680px 여부와 무관하게 동작) */
         width: calc(100vw - 40px);
         max-width: calc(100vw - 40px);
+        min-width: 0; /* 콘텐츠의 최소 너비에 막히지 않고 더 작게 줄어들 수 있도록 허용 */
         box-sizing: border-box;
         margin-left: auto;
         margin-right: auto; /* 가운데 정렬 → 좌우 여백 대칭 유지 */
@@ -1219,6 +1220,7 @@ textarea.form-control {
         min-height: 200px;
         width: 100%;
         max-width: 100%;
+        min-width: 0;
         box-sizing: border-box;
     }
 
@@ -1226,6 +1228,7 @@ textarea.form-control {
         padding: 1rem;
         width: 100%;
         max-width: 100%;
+        min-width: 0;
         box-sizing: border-box;
     }
 
