@@ -499,9 +499,9 @@ document.addEventListener('DOMContentLoaded', () => {
               const label = context.label || '';
               const idx = context.dataIndex;
               const value = rawCounts[idx] || 0;
-              if (!total) return `${label}: ${value}명`;
+              if (!total) return `${label} - ${value}명`;
               const pct = Math.round((value / total) * 100);
-              return `${label}: ${value}명 (${pct}%)`;
+              return `${label} - ${value}명 (${pct}%)`;
             }
           }
         },
@@ -524,10 +524,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const pct = Math.round((valNum / total) * 100);
             const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
             if (ct === 'doughnut') {
-              // 도넛: 큰 조각(내부)은 흰색, 작은 조각(외부)은 어두운 텍스트
-              const smallThreshold = 12;
-              if (pct >= smallThreshold) return '#ffffff';
-              return '#111827';
+              // 도넛: 퍼센트 텍스트는 흰색으로, 외곽선으로 대비 확보
+              if (pct <= 0) return 'transparent';
+              return '#ffffff';
             }
             // 막대그래프: 항상 어두운 텍스트
             return '#111827';
@@ -539,8 +538,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const pct = Math.round((valNum / total) * 100);
             const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
             if (ct === 'doughnut') {
-              const smallThreshold = 12;
-              if (pct >= smallThreshold) return 'rgba(15,23,42,0.7)';
+              if (pct <= 0) return 'transparent';
+              return '#000000';
             }
             return 'transparent';
           },
@@ -551,8 +550,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const pct = Math.round((valNum / total) * 100);
             const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
             if (ct === 'doughnut') {
-              const smallThreshold = 12;
-              if (pct >= smallThreshold) return 2;
+              if (pct <= 0) return 0;
+              return 2;
             }
             return 0;
           },
@@ -563,9 +562,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const pct = Math.round((valNum / total) * 100);
             const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
             if (ct === 'doughnut') {
-              const smallThreshold = 12;
-              // 큰 조각은 도넛 안쪽, 작은 조각은 바깥쪽
-              return pct >= smallThreshold ? 'center' : 'end';
+              // 기본은 도넛 안쪽 중앙에 배치
+              return 'center';
             }
             return 'end';
           },
@@ -576,8 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const pct = Math.round((valNum / total) * 100);
             const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
             if (ct === 'doughnut') {
-              const smallThreshold = 12;
-              return pct >= smallThreshold ? 'center' : 'end';
+              return 'center';
             }
             return 'end';
           },
@@ -588,14 +585,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const pct = Math.round((valNum / total) * 100);
             const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
             if (ct === 'doughnut') {
-              const smallThreshold = 12;
-              if (pct >= smallThreshold) return 0; // 큰 조각: 도넛 내부
-              // 작은 조각: 바깥쪽 라벨, 다섯 번째 조각은 살짝 더 띄워줌
-              let base = 14;
-              if (idx === 4) base += 6;
-              return base;
+              // 기본은 중앙에, 아주 작은 조각(<5%)은 표시 자체를 display 단계에서 막음
+              return 0;
             }
-            return 4; // 막대 그래프 상단 약간 띄우기
+            // 막대그래프 상단 약간 띄우기
+            return 4;
           },
           formatter: (value, context) => {
             const idx = context.dataIndex;
@@ -606,7 +600,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const ct = state.optionChartType === 'bar' ? 'bar' : 'doughnut';
 
             if (ct === 'doughnut') {
-              // 비율 > 0 인 모든 조각에 % 텍스트만 표시
+              // 0%는 display 단계에서 이미 제거, 나머지는 내부에 %만 출력
+              if (pct <= 0) return '';
               return `${pct}%`;
             }
 

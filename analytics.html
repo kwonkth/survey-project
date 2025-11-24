@@ -141,6 +141,15 @@
       gap: 1.25rem;
     }
 
+    /* Long survey / question titles in selects: prevent horizontal overflow */
+    #surveySelector,
+    #questionSelect {
+      max-width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
     /* Toolbar styling (survey select + export buttons) */
     .analytics-page .analytics-toolbar {
       display: flex;
@@ -332,7 +341,7 @@
       overflow-x: auto;
     }
     .analytics-page .chart-canvas-wrap canvas {
-      min-width: 480px;
+      min-width: 0; /* 고정 폭을 제거해 작은 화면에서도 가로 슬라이드가 생기지 않도록 */
     }
     .analytics-page .table-area {
       border-left: 1px solid #e5e7eb;
@@ -482,15 +491,25 @@
       }
       .analytics-page .chart-canvas-wrap {
         height: 220px;
-        overflow-x: hidden; /* 모바일에서는 가로 스크롤 제거 */
-        width: 100%;
-        max-width: 100%;
+        display: flex;
+        justify-content: flex-start !important;
+        align-items: center;
+        overflow-x: hidden !important; /* 모바일에서는 가로 스크롤 제거 */
+        width: 100% !important;
+        max-width: 100% !important;
         margin-right: auto; /* flex 컨테이너 내에서 왼쪽에 고정 */
       }
       .analytics-page .chart-canvas-wrap canvas {
         min-width: 0;
         width: 100% !important;
         height: 220px !important;
+      }
+
+      /* 모바일에서 도넛 캔버스가 카드 폭을 넘지 않도록 강제 */
+      #chart2 {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
       }
 
       .analytics-page .chart-zero-note {
