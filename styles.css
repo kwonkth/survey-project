@@ -215,12 +215,21 @@ body {
     grid-column: 1 / -1;
     text-align: center;
     background: linear-gradient(135deg, #f6f8ff, #f0f4ff);
-    border: 2px dashed var(--primary-color);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 250px;
+    position: relative;
+}
+
+.new-survey::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border: 2px dashed var(--primary-color);
+    box-sizing: border-box;
+    pointer-events: none;
 }
 
 .new-survey h2 {
@@ -241,6 +250,11 @@ body {
     font-weight: bold;
     transition: all 0.3s ease;
     box-shadow: 0 4px 6px rgba(106, 90, 205, 0.2);
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    box-sizing: border-box;
+    display: inline-block;
 }
 
 .primary-btn:hover {
