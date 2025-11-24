@@ -303,12 +303,14 @@
       align-items: center;
     }
     .analytics-page .chart-date-select {
-      padding: 0.35rem 0.6rem;
-      font-size: 0.85rem;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
       border-radius: 999px;
       border: 1px solid #d1d5db;
       background: #fff;
       color: #374151;
+      width: 120px;
+      max-width: 100%;
     }
     .analytics-page .chart-type-toggle {
       display: inline-flex;
@@ -348,6 +350,20 @@
     }
     .analytics-page .chart-canvas-wrap canvas {
       min-width: 0; /* 고정 폭을 제거해 작은 화면에서도 가로 슬라이드가 생기지 않도록 */
+    }
+
+    /* Ensure chart area and canvas never overflow their parent width */
+    .analytics-page .chart-area,
+    .analytics-page .chart-canvas-wrap {
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+    .analytics-page .chart-canvas-wrap canvas,
+    .analytics-page #chart2 {
+      display: block;
+      max-width: 100% !important;
+      width: 100% !important;
+      height: auto !important;
     }
     .analytics-page .table-area {
       border-left: 1px solid #e5e7eb;
