@@ -1167,9 +1167,12 @@ textarea.form-control {
 
     .dashboard-grid {
         grid-template-columns: 1fr;
+        /* 전체 컨테이너보다 약간 좁게 잡아서, 오른쪽에 항상 여백이 남도록 조정 */
         width: 100%;
-        max-width: 100%;
+        max-width: calc(100% - 1.5rem);
         box-sizing: border-box;
+        margin-left: 0;
+        margin-right: auto;
     }
 
     .new-survey {
