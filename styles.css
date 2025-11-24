@@ -1231,6 +1231,16 @@ textarea.form-control {
         padding: 0.55rem 1rem;
     }
 
+    /* 메인 페이지 새 설문조사 버튼: 긴 텍스트도 줄바꿈 허용, 카드 폭을 넘지 않도록 */
+    .primary-btn {
+        font-size: 1rem;
+        padding: 0.7rem 1.5rem;
+        max-width: 100%;
+        white-space: normal;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
     /* analytics.html 모바일 차트 영역 조정 */
     .analytics-content {
         padding: 0.75rem 0.75rem 1rem;
