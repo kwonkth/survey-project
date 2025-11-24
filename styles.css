@@ -175,6 +175,7 @@ body {
     width: 100%;
     box-sizing: border-box;
     overflow-y: auto;
+    overflow-x: hidden; /* 가로 스크롤이 생기지 않도록 강제 */
     -webkit-overflow-scrolling: touch;
 }
 
