@@ -487,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
       layout: {
         padding: state.optionChartType === 'bar'
           ? { top: 16, right: 32, bottom: 24, left: 32 }
-          : { top: 24, right: 40, bottom: 32, left: 40 }
+          : { top: 16, right: 40, bottom: 24, left: 8 } // 도넛은 왼쪽 패딩을 줄이고 오른쪽을 넉넉히 줘서 시각적으로 왼쪽에 붙여 보이도록
       },
       plugins: {
         legend: {

@@ -143,6 +143,16 @@
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
+            min-height: 260px; /* 설문이 없더라도 카드 영역 높이를 유지 */
+            align-content: flex-start;
+        }
+        .survey-grid-empty {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #7f8c8d;
+            font-size: 0.9rem;
         }
 
         .survey-card {

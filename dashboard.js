@@ -328,7 +328,13 @@ document.addEventListener('DOMContentLoaded', () => {
         surveyGrid.innerHTML = '';
 
         if (filtered.length === 0) {
-            emptyState.style.display = 'block';
+            // 설문이 없더라도 그리드 영역의 너비/높이를 유지하기 위해
+            // 그리드 내부에 빈 상태 메시지를 표시합니다.
+            emptyState.style.display = 'none';
+            const msg = document.createElement('div');
+            msg.className = 'survey-grid-empty';
+            msg.textContent = '현재 선택한 조건에 맞는 설문이 없습니다.';
+            surveyGrid.appendChild(msg);
             return;
         }
 
