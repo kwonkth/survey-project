@@ -1343,6 +1343,16 @@ textarea.form-control {
     .answer-option .btn-icon {
         flex: 0 0 auto;
     }
+
+    /* 모바일에서 quest-item hover 시 scale로 인해 가로 폭이 커지는 현상을 방지 */
+    .quest-item {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .quest-item:hover {
+        transform: translateY(-3px); /* scale(1.02) 제거: 세로만 살짝 띄우기 */
+    }
 }
 
 /* Animations */
