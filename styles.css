@@ -50,9 +50,9 @@
 }
 
 html {
-    width: 100%;
+    width: 100% !important;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
 }
 
 body {
@@ -62,9 +62,9 @@ body {
     background-color: #f9f9f9;
     margin: 0;
     padding: 0;
-    width: 100%;
+    width: 100% !important;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
 }
 
 .app-container {
@@ -114,6 +114,8 @@ body {
     left: 0;
     right: 0;
     z-index: 200;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
 .logo {
@@ -152,16 +154,17 @@ body {
 
 @media (max-width: 768px) {
     .app-header {
-        padding: 0.75rem 1rem;
-        box-sizing: border-box;
+        padding: 0.75rem 1rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
     .mobile-container {
-        width: 100%;
+        width: 100% !important;
         max-width: 100%;
         margin: 0;
         box-shadow: none;
         border-radius: 0;
-        overflow-x: hidden;
+        overflow-x: hidden !important;
     }
     .logo {
         font-size: 1.3rem;
@@ -1166,6 +1169,7 @@ textarea.form-control {
     .dashboard {
         /* 모바일에서 메인 콘텐츠 오른쪽에 여백을 조금 더 주어, 시각적으로 좌우가 꽉 차 보이지 않도록 조정 */
         padding: 1rem 1.25rem 1rem 1rem;
+        overflow-x: hidden !important;
     }
 
     .dashboard-grid {
