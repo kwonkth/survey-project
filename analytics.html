@@ -109,6 +109,9 @@
       </section>
       <div id="analyticsOutput" style="display:none;"></div>
     </main>
+    <footer class="app-footer">
+      <small> 2024 .</small>
+    </footer>
   </div>
 
   <script src="analytics.js"></script>
@@ -397,6 +400,14 @@
     .analytics-page .option-stats-table {
       font-size: 0.85rem;
     }
+    .analytics-page .option-stats-table td.numeric {
+      font-weight: 600;
+      color: #111827;
+    }
+    .analytics-page .response-badge .response-number {
+      font-weight: 700;
+      color: #111827;
+    }
     .analytics-page .option-stats-table table {
       width: 100%;
       border-collapse: collapse;
@@ -448,6 +459,7 @@
     /* Export dropdown */
     .analytics-page .export-dropdown {
       position: relative;
+      z-index: 50; /* 차트/카드보다 위 레이어에서 드롭다운이 뜨도록 */
     }
     .analytics-page .export-toggle {
       display: inline-flex;
@@ -466,7 +478,7 @@
       flex-direction: column;
       gap: 0.25rem;
       min-width: 180px;
-      z-index: 10;
+      z-index: 999; /* 그래프 위로 완전히 올라오도록 충분히 크게 */
     }
     .analytics-page .export-menu.open {
       display: flex;
@@ -519,6 +531,10 @@
       }
       .analytics-page .kpi-value {
         font-size: 1.05rem;
+      }
+      .analytics-page .response-badge .response-number {
+        font-weight: 700;
+        color: #111827;
       }
 
       .analytics-page .analytics-toolbar {

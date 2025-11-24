@@ -48,6 +48,12 @@
     box-sizing: border-box;
 }
 
+html {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
 body {
     font-family: 'Gowun Batang', 'Malgun Gothic', sans-serif;
     line-height: 1.6;
@@ -65,6 +71,32 @@ body {
     flex-direction: column;
     min-height: 100%;
     width: 100%;
+}
+
+.app-footer {
+    margin-top: auto;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.8rem;
+    color: #9ca3af;
+    text-align: center;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+.app-footer small {
+    display: inline-block;
+}
+
+.app-footer {
+    margin-top: auto;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.8rem;
+    color: #9ca3af;
+    text-align: center;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+.app-footer small {
+    display: inline-block;
 }
 
 /* Header Styles */

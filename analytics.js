@@ -687,8 +687,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="option-label-text">${escapeHTML(o.label)}</span>
           </span>
         </td>
-        <td style="text-align:right;">${o.count}</td>
-        <td style="text-align:right;">${o.percent}%</td>
+        <td class="numeric" style="text-align:right;">${o.count}</td>
+        <td class="numeric" style="text-align:right;">${o.percent}%</td>
       </tr>`;
     }).join('');
 
@@ -786,10 +786,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const hasChoices = Array.isArray(q.options) && q.options.length > 0;
       if (hasChoices && totalVotes > 0) {
         // 객관식/복수 선택 문항: 총 응답은 "투표 수", 괄호 안에 투표 인원수 표기
-        totalEl.textContent = `총 응답: ${totalVotes}표 (투표 인원수 ${responded}명)`;
+        totalEl.innerHTML = `총 응답: <span class="response-number">${totalVotes}</span>표 (투표 인원수 <span class="response-number">${responded}</span>명)`;
       } else {
         // 기타 문항: 응답 인원만 표시
-        totalEl.textContent = `응답 인원: ${responded}명`;
+        totalEl.innerHTML = `응답 인원: <span class="response-number">${responded}</span>명`;
       }
     }
   }
