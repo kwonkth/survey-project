@@ -75,8 +75,9 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: relative;
-    z-index: 100;
+    position: sticky;
+    top: 0;
+    z-index: 200;
 }
 
 .logo {
@@ -1106,14 +1107,21 @@ textarea.form-control {
 
     .dashboard-grid {
         grid-template-columns: 1fr;
+        width: 100%;
     }
 
     .new-survey {
         min-height: 200px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .dashboard-card {
         padding: 1rem;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .stat-value {

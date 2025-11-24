@@ -347,6 +347,7 @@
     /* 차트/테이블 카드 최소 높이 유지 */
     .analytics-page #overallDoughnutContainer {
       min-height: 360px;
+      overflow-x: hidden; /* 카드 자체에서 가로 넘침 차단 */
     }
     .analytics-page .chart-area {
       min-height: 300px;
@@ -355,7 +356,12 @@
     }
     .analytics-page .chart-canvas-wrap {
       height: 300px;
-      overflow-x: auto;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden; /* 차트 캔버스가 카드 폭을 넘지 못하게 고정 */
     }
     .analytics-page .chart-canvas-wrap canvas {
       min-width: 0; /* 고정 폭을 제거해 작은 화면에서도 가로 슬라이드가 생기지 않도록 */
@@ -581,11 +587,19 @@
       .analytics-page .analytics-toolbar {
         width: 100%;
       }
-      .analytics-page .analytics-filter-group,
-      .analytics-page .analytics-filter-group select,
+      /* 모바일에서 설문/문항 셀렉트는 100% 폭, 응답 기간은 별도 폭 적용 (Option A) */
+      .analytics-page .analytics-filter-group {
+        width: 100%;
+        max-width: 100%;
+      }
       .analytics-page .analytics-filter-group .form-control {
         width: 100%;
         max-width: 100%;
+      }
+      #dateRangePreset.chart-date-select {
+        width: 120px;
+        max-width: 100%;
+        align-self: flex-start;
       }
 
       .analytics-page .option-stats-table {
