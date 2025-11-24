@@ -158,7 +158,9 @@
       flex-wrap: wrap;
       width: 100%;
       max-width: 100%;
-      overflow: hidden;
+      /* 가로 스크롤만 막고, 세로로는 드롭다운 메뉴가 자연스럽게 펼쳐지도록 */
+      overflow-x: hidden;
+      overflow-y: visible;
     }
     .analytics-page .analytics-filter-group {
       display: flex;
