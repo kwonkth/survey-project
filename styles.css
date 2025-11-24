@@ -12,6 +12,15 @@
     --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+/* iOS / 모바일 뷰포트에서는 max-width 기반 가운데 정렬 대신 전체 폭 사용 */
+@media (max-width: 1080px) {
+    .mobile-container {
+        width: 100%;
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+}
+
 /* Mobile container */
 .mobile-container {
     width: 100%;
@@ -53,6 +62,9 @@ html {
     width: 100% !important;
     max-width: 100%;
     overflow-x: hidden !important;
+    position: relative;
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
 }
 
 body {
@@ -65,6 +77,9 @@ body {
     width: 100% !important;
     min-height: 100vh;
     overflow-x: hidden !important;
+    position: relative;
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
 }
 
 .app-container {
@@ -116,6 +131,8 @@ body {
     z-index: 200;
     width: 100% !important;
     box-sizing: border-box !important;
+    padding-left: calc(1rem + env(safe-area-inset-left, 0));
+    padding-right: calc(1rem + env(safe-area-inset-right, 0));
 }
 
 .logo {
@@ -236,6 +253,15 @@ body {
     outline-offset: -10px;
     box-sizing: border-box;
     pointer-events: none;
+}
+
+/* iOS Safari 전용: outline-offset 음수 버그 회피를 위해 border 기반으로 대체 */
+@supports (-webkit-touch-callout: none) {
+    .new-survey::before {
+        outline: none !important;
+        border: 2px dashed var(--primary-color);
+        inset: 10px;
+    }
 }
 
 .new-survey h2 {
@@ -1175,10 +1201,10 @@ textarea.form-control {
     .dashboard-grid {
         grid-template-columns: 1fr;
         width: 100%;
-        max-width: 100%;
+        max-width: 96%; /* 컨테이너보다 약간 좁게 잡아 좌우에 동일한 여백을 생성 */
         box-sizing: border-box;
-        margin-left: 0;
-        margin-right: 0;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .new-survey {
