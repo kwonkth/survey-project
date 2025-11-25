@@ -112,8 +112,6 @@
             overflow-y: auto;
             overflow-x: hidden; /* 가로 스크롤은 숨기고 세로만 허용 */
             -webkit-overflow-scrolling: touch;
-            position: relative;
-            padding-bottom: 80px;
         }
         
         .option-btn {
@@ -183,13 +181,8 @@
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(106, 90, 205, 0.4);
             transition: all 0.2s ease;
-            position: sticky;
-            bottom: 0;
-            align-self: stretch;
             width: 100%;
             max-width: 100%;
-            margin-top: 16px;
-            z-index: 2;
         }
 
         .submit-btn:hover {
@@ -276,16 +269,8 @@
             white-space: nowrap;
         }
 
-        /* 하단 버튼 영역 뒤로 스크롤되는 답변을 완전히 가리기 위한 마스크 */
-        #optionsBottomMask {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            height: 80px;
-            background: rgba(0, 0, 0, 0.7);
-            pointer-events: none;
-            z-index: 1;
+        #nextButtonContainer {
+            margin-top: 20px;
         }
 
         @media (max-width: 768px) {
@@ -351,6 +336,8 @@
                 font-size: 1.05rem; /* ~17px */
                 line-height: 1.35;
                 white-space: normal;
+                max-width: 90%;
+                margin: 0 auto; /* 모바일에서 양옆 여백을 두어 오른쪽 끝에 붙지 않도록 */
             }
             .submit-btn {
                 font-size: 1.05rem; /* ~17px */
@@ -358,6 +345,18 @@
                 border-radius: 12px;
                 width: 100%;
             }
+        }
+
+        .participant-order-number {
+            font-size: 2.8rem;
+            margin: 0.5rem 0 0.25rem;
+            color: #f1c40f;
+        }
+
+        .participant-order-label {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #f9fafb;
         }
     </style>
 </head>
@@ -377,7 +376,7 @@
                     <div id="character-name"></div>
                     <div id="questionContainer"></div>
                     <div id="optionsContainer"></div>
-                    <div id="optionsBottomMask"></div>
+                    <div id="nextButtonContainer"></div>
                 </div>
             </div>
         </div>

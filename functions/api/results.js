@@ -25,7 +25,15 @@ export async function onRequestPost({ request, env }) {
       .bind(result_id, survey_id, answersText, createdAt)
       .run();
 
-    return Response.json({ success: true });
+    // 이 설문에 대한 총 응답 수(=이번 응답의 참여 순번)를 계산
+    const countResult = await env.surveyforge
+      .prepare(`SELECT COUNT(*) AS cnt FROM results WHERE survey_id = ?`)
+      .bind(survey_id)
+      .all();
+
+    const order = (countResult && Array.isArray(countResult.results) && countResult.results[0]?.cnt) || 0;
+
+    return Response.json({ success: true, order });
   } catch (e) {
     return Response.json({ error: 'DB error', detail: String(e?.message || e) }, { status: 500 });
   }

@@ -3,6 +3,16 @@ document.addEventListener('DOMContentLoaded', () => {
         Chart.register(ChartDataLabels);
     }
 
+    function pickRandomOrder(surveyId) {
+        const count = state.resultCounts.get(surveyId) || 0;
+        if (!count || count <= 0) {
+            alert('아직 응답이 없습니다. 응답이 수집된 후에 랜덤 번호를 뽑을 수 있습니다.');
+            return;
+        }
+        const n = Math.floor(Math.random() * count) + 1; // 1 ~ count
+        alert(`이 설문에 대한 랜덤 응답 순번은 \n\n${n}번째 참여자입니다.`);
+    }
+
     let currentMoveSurveyId = null;
 
     function openMoveFolderModal(surveyId) {
@@ -453,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="survey-actions">
                 <button class="btn-survey-action" onclick="editSurvey('${survey.id}')">수정</button>
                 <button class="btn-survey-action" onclick="shareSurvey('${survey.id}')">링크 확인</button>
-                <button class="btn-survey-action btn-survey-delete" onclick="deleteSurvey('${survey.id}')">삭제</button>
+                <button class="btn-survey-action" onclick="pickRandomOrder('${survey.id}')">추첨</button>
             </div>
         `;
 
@@ -985,6 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.closeMoveFolderModal = closeMoveFolderModal;
     window.applyMoveFolder = applyMoveFolder;
     window.setAllSurveysActive = setAllSurveysActive;
+    window.pickRandomOrder = pickRandomOrder;
     // exports removed
 
     // 배포 종료 / 재배포 버튼 클릭 처리 (이벤트 위임)

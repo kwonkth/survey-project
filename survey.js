@@ -134,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const questionContainer = document.getElementById('questionContainer');
         const optionsContainer = document.getElementById('optionsContainer');
+        const nextButtonContainer = document.getElementById('nextButtonContainer');
         const progressEl = document.getElementById('surveyHeaderProgress');
 
         // 진행 상황 표시: 총 N문항 중 M번째
@@ -145,6 +146,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         questionContainer.innerHTML = `<p>${question.text}</p>`;
         optionsContainer.innerHTML = '';
+        if (nextButtonContainer) {
+            nextButtonContainer.innerHTML = '';
+        }
 
         // Apply optional per-question background/trigger if provided
         try {
@@ -198,7 +202,11 @@ document.addEventListener('DOMContentLoaded', () => {
         nextBtn.onclick = () => {
             handleNext(question, qType, optionsContainer);
         };
-        optionsContainer.appendChild(nextBtn);
+        if (nextButtonContainer) {
+            nextButtonContainer.appendChild(nextBtn);
+        } else {
+            optionsContainer.appendChild(nextBtn);
+        }
         // Add other question types as needed (e.g., 'scale')
     }
 
@@ -326,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="content">
                 <div class="completion-screen">
                     <h2>참여해주셔서 감사합니다.</h2>
+                    <div id="participantOrder"></div>
                     <p id="completionStatus">응답을 저장하는 중입니다...</p>
                 </div>
             </div>
@@ -337,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function finalizeSurvey() {
         console.log('[survey] finalizeSurvey start, surveyId =', state.survey && state.survey.id, 'answers =', state.answers);
         const statusEl = document.getElementById('completionStatus');
+        const orderEl = document.getElementById('participantOrder');
         if (statusEl) {
             statusEl.textContent = '응답을 저장하는 중입니다...';
         }
@@ -352,10 +362,17 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             console.log('[survey] about to POST /api/results', payload);
             // answers는 [{questionId, value}] 배열 형태로 저장
-            await API.postResult(payload);
-            console.log('[survey] POST /api/results success');
+            const res = await API.postResult(payload);
+            console.log('[survey] POST /api/results success', res);
             if (statusEl) {
                 statusEl.textContent = '응답이 저장되었습니다. 감사합니다.';
+            }
+            const order = res && typeof res.order === 'number' ? res.order : null;
+            if (orderEl && order && order > 0) {
+                orderEl.innerHTML = `
+                    <h1 class="participant-order-number">${order}</h1>
+                    <p class="participant-order-label">번째 참여자입니다!</p>
+                `;
             }
         } catch (e) {
             console.error('[survey] 응답 저장 중 오류', e);
