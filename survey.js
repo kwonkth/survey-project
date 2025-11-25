@@ -400,5 +400,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.querySelector('.mobile-container');
         container.innerHTML = `<div class="error-screen"><h2>오류</h2><p>${message}</p></div>`;
     }
-    
+
+    // 모바일에서 가상 키보드가 올라올 때 텍스트 입력창이 가려지지 않도록,
+    // 포커스된 입력 필드를 화면 중앙쯤으로 스크롤하는 가드.
+    function attachMobileInputScrollGuard() {
+        document.addEventListener('focusin', (e) => {
+            const el = e.target;
+            if (!el.classList || !el.classList.contains('text-input')) return;
+
+            // 데스크톱에서는 동작하지 않도록, 일정 너비 이하에서만 동작
+            if (window.innerWidth > 900) return;
+
+            // 키보드가 완전히 올라온 뒤 스크롤되도록 약간 지연
+            setTimeout(() => {
+                try {
+                    el.scrollIntoView({
+                        block: 'center',
+                        behavior: 'smooth'
+                    });
+                } catch (err) {
+                    // 일부 브라우저에서는 scrollIntoView 옵션 지원이 제한적이므로 조용히 무시
+                }
+            }, 300);
+        });
+    }
+
+    // 초기화 시 모바일 입력 스크롤 가드를 한 번만 등록
+    attachMobileInputScrollGuard();
 });
