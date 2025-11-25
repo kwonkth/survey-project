@@ -69,11 +69,12 @@
         #text-box {
             background: rgba(0, 0, 0, 0.7);
             color: white;
-            padding: 24px 24px;
+            /* 내부 패딩 + max-width + margin:auto 조합으로 항상 정확한 가운데 정렬 */
+            padding: 24px 16px;  /* 좌우 16px 고정 패딩 */
             border-radius: 10px;
-            max-width: 820px;
-            width: calc(100% - 48px); /* 좌우 24px 여백을 항상 유지 (메인 페이지와 동일한 패턴) */
-            margin: 24px auto; /* 위아래 24px, 좌우 자동 가운데 정렬 */
+            max-width: 820px;    /* 데스크톱 기준 최대 폭 */
+            width: 100%;         /* 부모 폭을 꽉 채우되 */
+            margin: 24px auto;   /* 언제나 가운데 정렬 */
             position: relative; /* 하단 마스크를 위한 기준 */
             overflow: hidden;   /* 버튼 아래로 스크롤되는 답변을 가리기 위해 */
         }
@@ -302,9 +303,11 @@
             }
 
             #text-box {
-                margin: 12px auto;           /* 가운데 정렬 */
-                width: calc(100% - 32px);    /* 좌우 16px씩 정확한 픽셀 여백 확보 */
-                max-width: 600px;
+                /* 모바일에서도 동일한 규칙: width:100% + max-width + 좌우 패딩 */
+                margin: 12px auto;       /* 가운데 정렬 유지 */
+                width: 100%;
+                max-width: 600px;        /* 모바일에서의 최대 폭 */
+                padding: 20px 16px;      /* 좌우 16px 패딩 유지, 위아래는 약간 축소 */
                 max-height: none;
             }
 
