@@ -43,12 +43,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('images/배경.png');
-            /* 모바일에서 잘리지 않도록 contain + 어두운 배경 사용 */
-            background-size: contain;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-color: #000;
+            /* 단색 배경으로 통일 (이미지 제거) */
+            background-color: #111827; /* 아주 짙은 남보라 계열, 텍스트 대비 유지 */
             z-index: 0; /* 모든 콘텐츠 뒤로 보내기 (부모 배경 뒤로는 가지 않도록 0으로 설정) */
         }
 
@@ -137,7 +133,7 @@
         
         .option-btn:hover {
             background: #f6f8ff; /* 메인 카드/버튼과 비슷한 연한 보라 배경 */
-            transform: translateX(4px);
+            /* 가로 위치 이동은 제거하여 좌우 정렬이 흐트러지지 않도록 함 */
         }
 
         .option-btn.selected {
