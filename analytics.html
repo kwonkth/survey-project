@@ -21,7 +21,7 @@
     </header>
 
     <main class="dashboard" style="max-width: 1280px; margin: 0 auto; padding: 0 16px;">
-      <h1>응답률 분석</h1>
+      <h1>결과 분석 및 통계</h1>
 
       <section class="dashboard-grid kpi-grid">
         <div class="dashboard-card kpi-row">
@@ -161,6 +161,7 @@
       flex-wrap: wrap;
       width: 100%;
       max-width: 100%;
+      margin-top: 0.5rem; /* "설문 및 문항 선택" 제목과 약간 간격을 두어 한 덩어리처럼 보이도록 */
       /* 드롭다운 메뉴가 카드 밖으로 자연스럽게 오버레이되도록 오버플로우를 잘라내지 않음 */
       overflow: visible;
     }
@@ -522,6 +523,7 @@
 
       .analytics-page h1 {
         font-size: 1.35rem;
+        margin-top: 0.75rem;
         margin-bottom: 0.75rem;
       }
 
@@ -549,6 +551,7 @@
         flex-direction: column;   /* 모바일에서는 설문/문항/응답기간을 위→아래로 세로 배치 */
         align-items: stretch;
         width: 100%;
+        margin-top: 0.5rem; /* 모바일에서도 제목과 필터 묶음 사이에 여백 유지 */
       }
       .analytics-page .analytics-toolbar label {
         font-size: 0.85rem;
