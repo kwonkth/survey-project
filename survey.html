@@ -302,8 +302,9 @@
             }
 
             #text-box {
-                margin: 12px;
-                width: 90%;
+                margin: 12px auto; /* 좌우 여백을 동일하게 두어 가운데 정렬 */
+                width: calc(100% - 24px); /* 양쪽 12px 여백을 항상 유지 */
+                max-width: 600px;
                 max-height: none;
             }
 
