@@ -110,6 +110,8 @@
             overflow-y: auto;
             overflow-x: hidden; /* 가로 스크롤은 숨기고 세로만 허용 */
             -webkit-overflow-scrolling: touch;
+            position: relative; /* 내부 sticky 버튼 기준 */
+            padding-bottom: 20px; /* 하단 고정 버튼과 내용이 겹치지 않도록 여유 공간 */
         }
         
         .option-btn {
@@ -164,18 +166,24 @@
             padding: 14px 28px;
             border-radius: 999px;
             border: none;
-            background: #f1c40f;
-            color: #2c3e50;
+            /* 메인 페이지와 동일한 보라 계열 버튼 스타일 */
+            background: linear-gradient(135deg, #6a5acd, #9b59b6);
+            color: #fff;
             font-size: 1.1rem;
             font-weight: 600;
+            font-family: 'Gowun Batang', 'Malgun Gothic', sans-serif;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 4px 10px rgba(106, 90, 205, 0.4);
             transition: all 0.2s ease;
+            position: sticky; /* 옵션 영역 스크롤 시에도 하단에 고정 */
+            bottom: 0;
+            align-self: center;
         }
 
         .submit-btn:hover {
-            background: #f39c12;
+            background: #4b3d8f; /* var(--primary-dark)와 유사한 진한 보라 */
             transform: translateY(-1px);
+            box-shadow: 0 6px 12px rgba(106, 90, 205, 0.5);
         }
 
         .submit-btn:disabled {

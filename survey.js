@@ -190,15 +190,15 @@ document.addEventListener('DOMContentLoaded', () => {
             textInput.className = 'text-input';
             textInput.placeholder = '답변을 입력하세요...';
             optionsContainer.appendChild(textInput);
-
-            const submitBtn = document.createElement('button');
-            submitBtn.textContent = isLast ? '설문 완료' : '다음';
-            submitBtn.className = 'submit-btn';
-            submitBtn.onclick = () => {
-                handleTextSubmit(textInput.value);
-            };
-            optionsContainer.appendChild(submitBtn);
         }
+        // 공통 "다음" 버튼: 항상 표시되며 답변 유효성 검사 후 다음 단계로 이동
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = '다음';
+        nextBtn.className = 'submit-btn';
+        nextBtn.onclick = () => {
+            handleNext(question, qType, optionsContainer);
+        };
+        optionsContainer.appendChild(nextBtn);
         // Add other question types as needed (e.g., 'scale')
     }
 
@@ -223,13 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.answers.push(currentAnswer);
             } else {
                 currentAnswer.value = selectedValue;
-            }
-            // 마지막 문항이면 다음 문항으로 가지 않고 완료 화면으로 이동
-            if (isLast) {
-                showCompletionScreen();
-            } else {
-                // Automatically move to next question for single choice
-                moveToNextQuestion();
             }
         } else if (type === 'checkbox') {
             const maxSel = parseInt(question.maxSelection, 10);
@@ -257,17 +250,47 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentAnswer.value.push(selectedValue);
                 }
             }
-            // For multi-select, we might need an explicit 'Next' button
-            // Let's add one for consistency
-            let nextBtn = optionsContainer.querySelector('.submit-btn');
-            if (!nextBtn) {
-                nextBtn = document.createElement('button');
-                nextBtn.textContent = '다음';
-                nextBtn.className = 'submit-btn';
-                nextBtn.style.marginTop = '1rem';
-                nextBtn.onclick = () => moveToNextQuestion();
-                optionsContainer.appendChild(nextBtn);
+        }
+    }
+
+    function handleNext(question, type, optionsContainer) {
+        if (!question.id) {
+            question.id = `q_${state.currentQuestionIndex + 1}`;
+        }
+
+        let currentAnswer = state.answers.find(a => a.questionId === question.id);
+
+        if (type === 'text') {
+            const input = optionsContainer ? optionsContainer.querySelector('.text-input') : null;
+            const value = input ? input.value.trim() : '';
+            if (!value) {
+                alert('답변을 선택 (서술형일시 입력)해주세요.');
+                return;
             }
+            if (!currentAnswer) {
+                currentAnswer = { questionId: question.id, value };
+                state.answers.push(currentAnswer);
+            } else {
+                currentAnswer.value = value;
+            }
+        } else if (type === 'radio') {
+            if (!currentAnswer || !currentAnswer.value) {
+                alert('답변을 선택 (서술형일시 입력)해주세요.');
+                return;
+            }
+        } else if (type === 'checkbox') {
+            const arr = currentAnswer && Array.isArray(currentAnswer.value) ? currentAnswer.value : [];
+            if (!arr.length) {
+                alert('답변을 선택 (서술형일시 입력)해주세요.');
+                return;
+            }
+        }
+
+        const isLast = state.currentQuestionIndex === state.survey.questions.length - 1;
+        if (isLast) {
+            showCompletionScreen();
+        } else {
+            moveToNextQuestion();
         }
     }
 
@@ -303,25 +326,19 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="content">
                 <div class="completion-screen">
                     <h2>참여해주셔서 감사합니다.</h2>
-                    <p>모든 답변이 준비되었습니다. 아래 버튼을 눌러 저장을 완료하세요.</p>
-                    <button id="saveResultsBtn" class="submit-btn">저장하기</button>
+                    <p id="completionStatus">응답을 저장하는 중입니다...</p>
                 </div>
             </div>
         `;
 
-        const saveBtn = document.getElementById('saveResultsBtn');
-        if (saveBtn) {
-            console.log('[survey] saveResultsBtn click handler attached');
-            saveBtn.onclick = finalizeSurvey;
-        }
+        finalizeSurvey();
     }
 
     async function finalizeSurvey() {
         console.log('[survey] finalizeSurvey start, surveyId =', state.survey && state.survey.id, 'answers =', state.answers);
-        const saveBtn = document.getElementById('saveResultsBtn');
-        if (saveBtn) {
-            saveBtn.disabled = true;
-            saveBtn.textContent = '저장 중...';
+        const statusEl = document.getElementById('completionStatus');
+        if (statusEl) {
+            statusEl.textContent = '응답을 저장하는 중입니다...';
         }
 
         try {
@@ -337,14 +354,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // answers는 [{questionId, value}] 배열 형태로 저장
             await API.postResult(payload);
             console.log('[survey] POST /api/results success');
-            if (saveBtn) {
-                saveBtn.textContent = '저장 완료';
+            if (statusEl) {
+                statusEl.textContent = '응답이 저장되었습니다. 감사합니다.';
             }
         } catch (e) {
             console.error('[survey] 응답 저장 중 오류', e);
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                saveBtn.textContent = '저장하기';
+            if (statusEl) {
+                statusEl.textContent = '응답 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
             }
         }
     }
