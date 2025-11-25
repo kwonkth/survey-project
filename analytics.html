@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>응답률 분석 - 서베이 스튜디오</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="Favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="Favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="Favicon/favicon-16x16.png">
+  <link rel="icon" type="image/x-icon" href="Favicon/favicon.ico">
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -631,12 +635,13 @@
         align-self: flex-start;
       }
 
-      /* 모바일에서는 내보내기 드롭다운을 화면 상단 오른쪽에 고정 오버레이로 표시 */
+      /* 모바일에서는 내보내기 드롭다운을 화면 상단 오른쪽에 고정 오버레이로 표시하되, 과한 그림자는 제거 */
       .analytics-page .export-menu {
         position: fixed;
         top: 96px;   /* 고정 헤더보다 충분히 아래에 위치시키기 */
         right: 12px; /* 화면 오른쪽에 약간 여백 두고 배치 */
         z-index: 1000;
+        box-shadow: none;
       }
 
       .analytics-page .option-stats-table {

@@ -174,9 +174,9 @@ body {
         padding: 0.75rem 1rem !important;
         width: 100% !important;
         box-sizing: border-box !important;
-        /* 한 줄에 모두 못 들어가면 다음 줄로 내려가도록 허용 → 헤더가 최소 폭을 강제로 만들지 않게 함 */
-        flex-wrap: wrap;
-        row-gap: 0.25rem;
+        /* 모바일에서는 로고 + 내비게이션을 한 줄에 유지하면서도 폭을 최소화 */
+        flex-wrap: nowrap;
+        row-gap: 0;
     }
     .mobile-container {
         width: 100% !important;
@@ -187,16 +187,17 @@ body {
         overflow-x: hidden !important;
     }
     .app-header nav {
-        /* 내비게이션 버튼들도 여러 줄로 감길 수 있게 해서 전체 최소 폭 축소 */
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        margin-left: auto; /* 로고 오른쪽 끝에 내비게이션 정렬 */
     }
     .logo {
         font-size: 1.1rem;
-        white-space: normal; /* 모바일에서도 로고 텍스트가 줄바꿈되지 않도록 */
+        white-space: nowrap;
     }
     .nav-btn {
         font-size: 0.8rem;
-        padding: 0.3rem 0.6rem;
+        padding: 0.25rem 0.5rem;
+        white-space: nowrap;
     }
 }
 
