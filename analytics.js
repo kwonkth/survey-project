@@ -609,8 +609,8 @@ document.addEventListener('DOMContentLoaded', () => {
               return `${pct}%`;
             }
 
-            // 막대그래프: 선택지명은 X축 라벨로만 사용, 막대 위에는 응답 수 + 퍼센트만 표시
-            return `${valNum}명 (${pct}%)`;
+            // 막대그래프: 선택지명은 X축 라벨로만 사용, 막대 위에는 "n표 (p%)" 형태로만 표시
+            return `${valNum}표 (${pct}%)`;
           }
         }
       }
