@@ -110,8 +110,8 @@
             overflow-y: auto;
             overflow-x: hidden; /* 가로 스크롤은 숨기고 세로만 허용 */
             -webkit-overflow-scrolling: touch;
-            position: relative; /* 내부 sticky 버튼 기준 */
-            padding-bottom: 20px; /* 하단 고정 버튼과 내용이 겹치지 않도록 여유 공간 */
+            position: relative;
+            padding-bottom: 80px;
         }
         
         .option-btn {
@@ -175,9 +175,13 @@
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(106, 90, 205, 0.4);
             transition: all 0.2s ease;
-            position: sticky; /* 옵션 영역 스크롤 시에도 하단에 고정 */
+            position: sticky;
             bottom: 0;
-            align-self: center;
+            align-self: stretch;
+            width: 100%;
+            max-width: 100%;
+            margin-top: 16px;
+            z-index: 2;
         }
 
         .submit-btn:hover {
@@ -208,6 +212,44 @@
             font-weight: bold;
             color: #ffcc00;
             margin-bottom: 5px;
+        }
+
+        .survey-footer {
+            position: relative;
+            z-index: 1;
+            margin-top: 16px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.8rem;
+            color: #d1d5db;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.6);
+            border-top: 1px solid rgba(156, 163, 175, 0.4);
+        }
+
+        .survey-header {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #f4f1ff;
+            z-index: 2;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .survey-header-icon {
+            width: 22px;
+            height: 22px;
+        }
+
+        .survey-header-text {
+            white-space: nowrap;
         }
 
         @media (max-width: 768px) {
@@ -278,7 +320,7 @@
                 font-size: 1.05rem; /* ~17px */
                 padding: 14px 0;
                 border-radius: 12px;
-                width: 90%;
+                width: 100%;
             }
         }
     </style>
@@ -286,6 +328,10 @@
 <body>
     <div class="mobile-container">
         <div id="background"></div>
+        <header class="survey-header">
+            <img src="Favicon/Main_icon.png" alt="서베이 스튜디오 아이콘" class="survey-header-icon">
+            <span class="survey-header-text">서베이 스튜디오</span>
+        </header>
         <div id="content">
             <div id="game-container">
                 <div id="progress"></div>
@@ -296,6 +342,9 @@
                 </div>
             </div>
         </div>
+        <footer class="survey-footer">
+            <small>2024 재능대학교 캡스톤 서베이 스튜디오 · 세얼간이 조</small>
+        </footer>
     </div>
     <script src="story-engine.js"></script>
     <script src="survey.js"></script>
