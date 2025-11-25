@@ -751,14 +751,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!first) return;
         const second = confirm('삭제된 설문과 수집된 데이터는 복구할 수 없습니다. 계속하시겠습니까?');
         if (!second) return;
+        let deleteOk = false;
         try {
             await API.deleteSurvey(surveyId);
+            deleteOk = true;
             await refreshSurveys();
             renderSurveys();
             updateAnalytics();
+            alert('설문이 성공적으로 삭제되었습니다.');
         } catch (e) {
-            alert('설문 삭제 중 오류가 발생했습니다.');
             console.error(e);
+            if (deleteOk) {
+                // 삭제는 되었으나 목록/통계 새로고침 중 오류가 난 경우
+                alert('설문은 삭제되었으나 목록 새로고침 중 오류가 발생했습니다. 페이지를 새로고침해 주세요.');
+            } else {
+                alert('설문 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+            }
         }
     }
 
