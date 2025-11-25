@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const questionContainer = document.getElementById('questionContainer');
         const optionsContainer = document.getElementById('optionsContainer');
-        const progressEl = document.getElementById('progress');
+        const progressEl = document.getElementById('surveyHeaderProgress');
 
         // 진행 상황 표시: 총 N문항 중 M번째
         if (progressEl && state.survey.questions.length) {

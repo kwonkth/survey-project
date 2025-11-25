@@ -77,6 +77,8 @@
             margin-left: auto;
             margin-right: auto;
             width: 85%;
+            position: relative; /* 하단 마스크를 위한 기준 */
+            overflow: hidden;   /* 버튼 아래로 스크롤되는 답변을 가리기 위해 */
         }
         .completion-screen {
             position: relative;
@@ -153,10 +155,16 @@
             font-size: 1.1rem;
             box-sizing: border-box;
             margin-bottom: 16px;
+            outline: none;
         }
 
         .text-input::placeholder {
             color: rgba(255, 255, 255, 0.75);
+        }
+
+        .text-input:focus {
+            border-color: rgba(244, 244, 255, 0.95);
+            box-shadow: 0 0 0 2px rgba(106, 90, 205, 0.55);
         }
 
         .submit-btn {
@@ -226,30 +234,58 @@
             border-top: 1px solid rgba(156, 163, 175, 0.4);
         }
 
-        .survey-header {
+        .survey-header-bar {
             position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2;
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 6px 14px;
-            border-radius: 999px;
-            background: rgba(0, 0, 0, 0.7);
-            color: #f4f1ff;
-            z-index: 2;
-            font-size: 1rem;
-            font-weight: 600;
+            justify-content: space-between;
+            padding: 0.75rem 1.5rem;
+            box-sizing: border-box;
+            background-color: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .survey-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
         .survey-header-icon {
-            width: 22px;
-            height: 22px;
+            width: 24px;
+            height: 24px;
         }
 
-        .survey-header-text {
+        .survey-header-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6a5acd, #9b59b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             white-space: nowrap;
+        }
+
+        .survey-header-progress {
+            font-size: 0.9rem;
+            color: #4b5563;
+            white-space: nowrap;
+        }
+
+        /* 하단 버튼 영역 뒤로 스크롤되는 답변을 완전히 가리기 위한 마스크 */
+        #optionsBottomMask {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.7);
+            pointer-events: none;
+            z-index: 1;
         }
 
         @media (max-width: 768px) {
@@ -275,7 +311,7 @@
 
             #game-container {
                 justify-content: flex-start;
-                padding-top: 32px;
+                padding-top: 80px; /* 상단 헤더 높이만큼 여백 */
                 padding-bottom: 32px;
             }
 
@@ -328,17 +364,20 @@
 <body>
     <div class="mobile-container">
         <div id="background"></div>
-        <header class="survey-header">
-            <img src="Favicon/Main_icon.png" alt="서베이 스튜디오 아이콘" class="survey-header-icon">
-            <span class="survey-header-text">서베이 스튜디오</span>
+        <header class="survey-header-bar">
+            <div class="survey-header-left">
+                <img src="Favicon/Main_icon.png" alt="서베이 스튜디오 아이콘" class="survey-header-icon">
+                <span class="survey-header-title">서베이 스튜디오</span>
+            </div>
+            <div id="surveyHeaderProgress" class="survey-header-progress"></div>
         </header>
         <div id="content">
             <div id="game-container">
-                <div id="progress"></div>
                 <div id="text-box">
                     <div id="character-name"></div>
                     <div id="questionContainer"></div>
                     <div id="optionsContainer"></div>
+                    <div id="optionsBottomMask"></div>
                 </div>
             </div>
         </div>
