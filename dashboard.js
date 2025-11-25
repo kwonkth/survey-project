@@ -133,14 +133,20 @@ document.addEventListener('DOMContentLoaded', () => {
         state.folders = getDefaultFolders();
         state.folderMap.clear();
         state.folders.forEach(folder => state.folderMap.set(folder.id, folder));
+        if (!state.folders || state.folders.length === 0) {
+            state.folders = [
+                { id: 'all', name: '모든 설문', icon: '📋', color: '#4a6baf' },
+                { id: 'draft', name: '작성 중', icon: '✏️', color: '#f39c12' },
+                { id: 'active', name: '배포 중', icon: '🚀', color: '#27ae60' }
+            ];
+        }
     }
 
     function getDefaultFolders() {
         return [
             { id: 'all', name: '모든 설문', icon: '📋', color: '#4a6baf' },
             { id: 'draft', name: '작성 중', icon: '✏️', color: '#f39c12' },
-            { id: 'active', name: '배포 중', icon: '🚀', color: '#27ae60' },
-            { id: 'closed', name: '응답 종료', icon: '✅', color: '#95a5a6' }
+            { id: 'active', name: '배포 중', icon: '🚀', color: '#27ae60' }
         ];
     }
 
