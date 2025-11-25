@@ -609,6 +609,16 @@
             .sort-selector {
                 margin-left: 0;
             }
+
+            /* 모바일에서 설문 목록 헤더와 버튼이 줄바꿈되지 않도록 폰트/여백 축소 */
+            .survey-grid-section .section-header h2 {
+                font-size: 1.1rem;
+            }
+
+            .survey-grid-section .btn-add-folder {
+                font-size: 0.8rem;
+                padding: 0.5rem 0.9rem;
+            }
         }
     </style>
 </head>
@@ -616,7 +626,10 @@
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
-            <div class="logo" onclick="navigateTo('index.html')">서베이 스튜디오</div>
+            <div class="logo" onclick="navigateTo('index.html')">
+                <img src="Favicon/Main_icon.png" alt="서베이 스튜디오 아이콘" class="logo-icon-desktop">
+                <span class="logo-text">서베이 스튜디오</span>
+            </div>
             <nav>
                 <button class="nav-btn" onclick="navigateTo('index.html')">대시보드</button>
                 <button class="nav-btn active">설문 관리</button>

@@ -16,7 +16,10 @@
 <body class="analytics-page">
   <div class="app-container">
     <header class="app-header">
-      <div class="logo" onclick="navigateTo('index.html')">서베이 스튜디오</div>
+      <div class="logo" onclick="navigateTo('index.html')">
+        <img src="Favicon/Main_icon.png" alt="서베이 스튜디오 아이콘" class="logo-icon-desktop">
+        <span class="logo-text">서베이 스튜디오</span>
+      </div>
       <nav>
         <button class="nav-btn" onclick="navigateTo('index.html')">대시보드</button>
         <button class="nav-btn" onclick="navigateTo('dashboard.html')">설문 관리</button>
@@ -256,6 +259,12 @@
     }
     .analytics-page .kpi-label-nowrap {
       white-space: nowrap;
+    }
+
+    /* 데스크톱에서 제목(h1)이 헤더와 너무 붙어 보이지 않도록 약간 아래로 내림 */
+    .analytics-page h1 {
+      margin-top: 1.5rem;
+      margin-bottom: 1.25rem;
     }
     .analytics-page .kpi-value {
       font-size: 2rem; /* 대시보드 위젯처럼 숫자를 크게 강조 */

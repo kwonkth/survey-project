@@ -136,6 +136,9 @@ body {
 }
 
 .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     font-size: 1.5rem;
     font-weight: bold;
     color: var(--primary-color);
@@ -145,6 +148,21 @@ body {
     background-clip: text;
     cursor: pointer;
     white-space: nowrap;
+}
+
+.logo-icon-desktop {
+    width: 24px;
+    height: 24px;
+}
+
+.logo-text {
+    display: inline-block;
+}
+
+.Main_icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 0.4rem;
 }
 
 .app-header nav {
@@ -193,6 +211,9 @@ body {
     .logo {
         font-size: 1.1rem;
         white-space: nowrap;
+    }
+    .logo-icon-desktop {
+        display: none;
     }
     .nav-btn {
         font-size: 0.8rem;
