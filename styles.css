@@ -1143,9 +1143,9 @@ textarea.form-control {
 }
 
 .share-link-icon-btn {
-    background-color: #f5f0ff;
-    color: var(--primary-color);
-    border: 1px solid rgba(106, 90, 205, 0.25);
+    background-color: #e6f0ff;
+    color: #4a6baf;
+    border: 1px solid rgba(74, 107, 175, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1154,7 +1154,7 @@ textarea.form-control {
 }
 
 .share-link-icon-btn:hover {
-    background-color: #e6ddff;
+    background-color: #d4e4ff;
 }
 
 .qr-code {

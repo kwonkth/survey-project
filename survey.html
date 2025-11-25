@@ -130,8 +130,8 @@
             transition: all 0.3s ease;
             letter-spacing: 0.2px;
             line-height: 1.6;
-            width: calc(100% - 32px);   /* 입력창/버튼과 동일 폭 */
-            margin: 0 16px;             /* 좌우 16px 여백 통일 */
+            width: 100%;                /* 부모(#text-box) 패딩 기준으로 동일 폭 */
+            margin: 0;                  /* 좌우 여백은 부모 패딩에만 의존 */
             box-sizing: border-box;
         }
         
@@ -149,7 +149,7 @@
         }
 
         .text-input {
-            width: calc(100% - 32px);   /* 좌우 16px씩 여백 확보 */
+            width: 100%;                /* 부모 패딩 기준으로 버튼/선택지와 동일 폭 */
             padding: 14px 16px;
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.8);
@@ -157,7 +157,7 @@
             color: #fff;
             font-size: 1.1rem;
             box-sizing: border-box;
-            margin: 0 16px 16px;        /* 좌우 16px, 아래 16px */
+            margin: 0 0 16px;           /* 아래 여백만 두고 좌우는 0 */
             outline: none;
         }
 
@@ -186,10 +186,10 @@
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(106, 90, 205, 0.4);
             transition: all 0.2s ease;
-            width: calc(100% - 32px);   /* 입력창과 동일 폭 */
+            width: 100%;                /* 입력창/선택지와 동일 폭 */
             max-width: none;
             box-sizing: border-box;
-            margin: 0 16px;             /* 좌우 16px */
+            margin: 0;                  /* 좌우 여백은 부모 패딩 사용 */
         }
 
         .submit-btn:hover {
