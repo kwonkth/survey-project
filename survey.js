@@ -402,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 모바일에서 가상 키보드가 올라올 때 텍스트 입력창이 가려지지 않도록,
-    // 포커스된 입력 필드를 화면 중앙쯤으로 스크롤하는 가드.
+    // 입력창이 포함된 질문 카드 전체를 화면 중앙 근처로 스크롤하는 가드.
     function attachMobileInputScrollGuard() {
         document.addEventListener('focusin', (e) => {
             const el = e.target;
@@ -414,10 +414,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // 키보드가 완전히 올라온 뒤 스크롤되도록 약간 지연
             setTimeout(() => {
                 try {
-                    el.scrollIntoView({
-                        block: 'center',
-                        behavior: 'smooth'
-                    });
+                    const card = document.getElementById('text-box');
+                    if (card) {
+                        card.scrollIntoView({
+                            block: 'center',
+                            behavior: 'smooth'
+                        });
+                    } else {
+                        el.scrollIntoView({
+                            block: 'center',
+                            behavior: 'smooth'
+                        });
+                    }
                 } catch (err) {
                     // 일부 브라우저에서는 scrollIntoView 옵션 지원이 제한적이므로 조용히 무시
                 }
