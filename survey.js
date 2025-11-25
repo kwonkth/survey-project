@@ -136,12 +136,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const optionsContainer = document.getElementById('optionsContainer');
         const nextButtonContainer = document.getElementById('nextButtonContainer');
         const progressEl = document.getElementById('surveyHeaderProgress');
+        const cardProgressFill = document.getElementById('surveyCardProgressFill');
 
-        // 진행 상황 표시: 총 N문항 중 M번째
-        if (progressEl && state.survey.questions.length) {
+        // 진행 상황 표시: 총 N문항 중 M번째 + 카드 상단 진행률 바
+        if (state.survey.questions.length) {
             const total = state.survey.questions.length;
             const current = state.currentQuestionIndex + 1;
-            progressEl.textContent = `${total}문항 중 ${current}번째`;
+
+            if (progressEl) {
+                progressEl.textContent = `${total}문항 중 ${current}번째`;
+            }
+
+            if (cardProgressFill) {
+                const ratio = Math.min(Math.max(current / total, 0), 1);
+                cardProgressFill.style.width = `${ratio * 100}%`;
+            }
         }
 
         // 특정 기본 질문 문구를 통일감 있는 문구로 교체
