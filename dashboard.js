@@ -803,6 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const qr = document.getElementById('shareQrDash');
         const copyBtn = document.getElementById('copyShareLinkBtn');
         const closeBtn = document.getElementById('closeShareModalBtn');
+        const smallCopyBtn = document.getElementById('copyShareLinkIconBtn');
 
         if (overlay && input && qr && copyBtn && closeBtn) {
             input.value = shareUrl;
@@ -810,8 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
             qr.style.display = 'inline-block';
             overlay.classList.add('active');
 
-            // Handlers (rebind safely)
-            copyBtn.onclick = async () => {
+            const doCopy = async () => {
                 try {
                     if (navigator.clipboard?.writeText) {
                         await navigator.clipboard.writeText(shareUrl);
@@ -824,6 +824,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch {
                     prompt('설문 링크를 복사하세요:', shareUrl);
                 }
+            };
+            if (smallCopyBtn) {
+                smallCopyBtn.onclick = doCopy;
+            }
+
+            copyBtn.onclick = () => {
+                window.open(shareUrl, '_blank', 'noopener');
             };
             closeBtn.onclick = () => overlay.classList.remove('active');
             overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove('active'); };
