@@ -16,7 +16,8 @@
             width: 100%;
             height: 100%;
             font-family: 'Gowun Batang', 'Malgun Gothic', sans-serif;
-            overflow: hidden;
+            overflow-x: hidden;  /* 가로 스크롤만 막고 */
+            overflow-y: auto;    /* 세로 스크롤은 허용해서 푸터까지 도달 가능하게 */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -26,12 +27,14 @@
         .mobile-container {
             width: 100%;
             max-width: 1080px;
-            height: 100%;
+            height: auto;
             max-height: 1920px;
+            min-height: 100vh;
             position: relative;
             background-color: transparent;
             box-shadow: none;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
         
         #background {
@@ -100,6 +103,8 @@
             /* 메인 페이지와 톤을 맞춘 밝은 보라 계열 텍스트 색상 */
             color: #f4f1ff;
             text-align: center; /* 질문 텍스트를 가로 기준 가운데 정렬 */
+            font-family: 'Gowun Batang', 'Malgun Gothic', sans-serif; /* 메인과 동일 폰트 */
+            font-weight: 400;
         }
         
         #optionsContainer {
@@ -328,8 +333,8 @@
             .text-input {
                 font-size: 0.95rem; /* ~15px */
                 padding: 12px 14px;
-                width: 90%;              /* 카드 안에서 살짝 여백을 두고 */
-                max-width: 480px;        /* 너무 넓어지지 않도록 상한 */
+                width: 100%;
+                max-width: 100%;
                 margin: 0 auto;          /* 좌우 대칭 중앙 정렬 */
             }
             .text-input::placeholder {
@@ -342,14 +347,14 @@
                 white-space: normal;
                 width: 100%;
                 max-width: 100%;
-                margin: 0 auto;
+                margin: 0 auto;         /* 중앙 정렬 */
             }
             .submit-btn {
                 font-size: 1.05rem; /* ~17px */
                 padding: 14px 0;
                 border-radius: 12px;
-                width: 90%;              /* 카드 안에서 살짝 여백을 두고 */
-                max-width: 480px;        /* 너무 넓어지지 않도록 상한 */
+                width: 100%;
+                max-width: 100%;
                 margin: 0 auto;          /* 좌우 대칭 중앙 정렬 */
             }
         }

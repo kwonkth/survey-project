@@ -144,6 +144,11 @@ document.addEventListener('DOMContentLoaded', () => {
             progressEl.textContent = `${total}문항 중 ${current}번째`;
         }
 
+        // 특정 기본 질문 문구를 통일감 있는 문구로 교체
+        if (typeof question.text === 'string' && question.text.trim() === '당신의 이름을 입력해주세요.') {
+            question.text = '시작하기 전에 이름을 입력해주세요.';
+        }
+
         questionContainer.innerHTML = `<p>${question.text}</p>`;
         optionsContainer.innerHTML = '';
         if (nextButtonContainer) {
