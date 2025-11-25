@@ -110,7 +110,7 @@
       <div id="analyticsOutput" style="display:none;"></div>
     </main>
     <footer class="app-footer">
-      <small>© 2024 설문 마법사 · 결과 분석 페이지 푸터(더미 텍스트)</small>
+      <small>© 2024 재능대학교 캡스톤 설문마법사 · 세얼간이 조</small>
     </footer>
   </div>
 
@@ -279,11 +279,18 @@
       text-overflow: ellipsis;
     }
 
-    /* Question text under title: smaller and lighter */
+    /* Question text under title: smaller, lighter, and allowed to wrap to multiple lines */
     .analytics-page .chart-question-title {
       font-size: 0.9rem;
       font-weight: 500;
       color: #4b5563;
+      line-height: 1.4;
+      white-space: normal;
+      word-break: keep-all;
+    }
+    .analytics-page .chart-question-title-main,
+    .analytics-page .chart-question-title-sub {
+      white-space: normal;
     }
 
     /* Total responses badge next to chart type toggle */
@@ -591,9 +598,11 @@
         font-size: 0.75rem;
       }
 
-      /* 긴 텍스트가 모바일에서 가로로 넘치지 않도록 처리 */
+      /* 긴 텍스트가 모바일에서 가로로 넘치지 않도록 처리
+         - 메인 타이틀/옵션 라벨은 한 줄로 줄임
+         - 문항 설명(chart-question-title)은 여러 줄로 래핑 허용 (위에서 별도 정의)
+      */
       .analytics-page .chart-main-title,
-      .analytics-page .chart-question-title,
       .analytics-page .option-label-text {
         max-width: 100%;
         overflow: hidden;
@@ -634,14 +643,20 @@
       .analytics-page .option-stats-table td {
         padding: 0.3rem 0.2rem;
       }
-      /* 도넛 / 막대 그래프 전환 버튼: 모바일에서도 가로(좌우)로 나란히 유지 */
+      /* 모바일에서는 차트 제목 아래쪽에 도넛/막대 스위치가 내려오도록 세로 레이아웃으로 조정 */
+      .analytics-page .chart-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
       .analytics-page .chart-header-controls {
+        width: 100%;
         justify-content: flex-start;
       }
       .analytics-page .chart-type-toggle {
         display: inline-flex;
-        flex-wrap: nowrap;
-        white-space: nowrap;
+        flex-wrap: wrap;
+        white-space: normal;
       }
       .analytics-page .chart-type-btn {
         font-size: 0.8rem;
