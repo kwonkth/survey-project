@@ -14,13 +14,10 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100%;
+            min-height: 100vh;
             font-family: 'Gowun Batang', 'Malgun Gothic', sans-serif;
             overflow-x: hidden;  /* 가로 스크롤만 막고 */
             overflow-y: auto;    /* 세로 스크롤은 허용해서 푸터까지 도달 가능하게 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
             background-color: #f0f2f5;
         }
         
@@ -35,6 +32,8 @@
             box-shadow: none;
             overflow-x: hidden;
             overflow-y: auto;
+            display: flex;              /* 상단 헤더 / 컨텐츠 / 푸터를 세로로 배치 */
+            flex-direction: column;
         }
         
         #background {
@@ -55,7 +54,7 @@
         #content {
             position: relative;
             z-index: 1; /* 배경보다 위로 올리기 */
-            height: 100%;
+            flex: 1 0 auto;            /* 남는 공간을 차지하도록 해서 푸터를 하단으로 밀기 */
             display: flex;
             flex-direction: column;
         }
@@ -63,7 +62,6 @@
         #game-container {
             position: relative;
             width: 100%;
-            height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -279,12 +277,10 @@
         }
 
         @media (max-width: 768px) {
-            /* 모바일에서는 전체 페이지를 세로 스크롤 가능하게 변경 */
+            /* 모바일에서는 전체 페이지를 세로 스크롤 가능하게 유지 */
             body, html {
-                height: auto;
                 min-height: 100vh;
                 overflow-y: auto;
-                align-items: flex-start;
             }
 
             .mobile-container {
@@ -296,7 +292,7 @@
             #content,
             #game-container {
                 height: auto;
-                min-height: 100vh;
+                min-height: auto;
             }
 
             #game-container {
@@ -306,8 +302,8 @@
             }
 
             #text-box {
-                margin: 12px auto; /* 좌우 여백을 동일하게 두어 가운데 정렬 */
-                width: calc(100% - 24px); /* 양쪽 12px 여백을 항상 유지 */
+                margin: 12px auto;      /* 가운데 정렬 */
+                width: 90%;             /* 뷰포트 대비 여유 있는 양옆 여백 확보 */
                 max-width: 600px;
                 max-height: none;
             }
