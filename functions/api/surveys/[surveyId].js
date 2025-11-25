@@ -34,6 +34,7 @@ async function ensureTables(env) {
         questions TEXT,
         story TEXT,
         status TEXT DEFAULT 'draft',
+        folder_id TEXT,
         created_at TEXT,
         updated_at TEXT
       )

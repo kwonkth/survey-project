@@ -34,18 +34,34 @@ export async function onRequestPatch({ params, request, env }) {
       return Response.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    const { status } = body || {};
-    if (!status) {
-      return Response.json({ error: 'Missing status' }, { status: 400 });
+    const { status, folder_id } = body || {};
+    if (!status && typeof folder_id === 'undefined') {
+      return Response.json({ error: 'Missing fields' }, { status: 400 });
     }
 
     const updatedAt = new Date().toISOString();
+
+    // 동적으로 업데이트할 컬럼 구성 (status / folder_id 둘 중 하나 또는 둘 다)
+    const sets = [];
+    const binds = [];
+    if (typeof status !== 'undefined') {
+      sets.push('status = ?');
+      binds.push(status);
+    }
+    if (typeof folder_id !== 'undefined') {
+      sets.push('folder_id = ?');
+      binds.push(folder_id ?? null);
+    }
+    sets.push('updated_at = ?');
+    binds.push(updatedAt, surveyId);
+
+    const sql = `UPDATE surveys SET ${sets.join(', ')} WHERE survey_id = ?`;
     await env.surveyforge
-      .prepare(`UPDATE surveys SET status = ?, updated_at = ? WHERE survey_id = ?`)
-      .bind(status, updatedAt, surveyId)
+      .prepare(sql)
+      .bind(...binds)
       .run();
 
-    return Response.json({ success: true, survey_id: surveyId, status, updated_at: updatedAt });
+    return Response.json({ success: true, survey_id: surveyId, status, folder_id, updated_at: updatedAt });
   } catch (e) {
     return Response.json({ error: 'DB error', detail: String(e?.message || e) }, { status: 500 });
   }
@@ -86,6 +102,7 @@ async function ensureTables(env) {
         questions TEXT,
         story TEXT,
         status TEXT DEFAULT 'draft',
+        folder_id TEXT,
         created_at TEXT,
         updated_at TEXT
       )

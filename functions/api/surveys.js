@@ -28,7 +28,8 @@ export async function onRequestPost({ request, env }) {
       description,
       questions,
       story,
-      status,      // ★ 추가됨
+      status,      // 설문 상태 (draft/active/archived 등)
+      folder_id,   // 설문이 속한 커스텀 폴더 ID (없으면 null)
       created_at,
       updated_at,
     } = body || {};
@@ -41,15 +42,16 @@ export async function onRequestPost({ request, env }) {
     const storyText = typeof story === 'string' ? story : story ? JSON.stringify(story) : null;
     const createdAt = created_at || new Date().toISOString();
     const updatedAt = updated_at || createdAt;
-    const statusValue = status || 'draft';   // ★ 기본값 draft
+    const statusValue = status || 'draft';   // 기본값 draft
+    const folderIdValue = folder_id ?? null;
 
     try {
       // INSERT
       await env.surveyforge
         .prepare(`
           INSERT INTO surveys 
-            (survey_id, title, description, questions, story, status, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (survey_id, title, description, questions, story, status, folder_id, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `)
         .bind(
           survey_id,
@@ -57,7 +59,8 @@ export async function onRequestPost({ request, env }) {
           description ?? null,
           questionsText,
           storyText,
-          statusValue,  
+          statusValue,
+          folderIdValue,
           createdAt,
           updatedAt
         )
@@ -69,7 +72,7 @@ export async function onRequestPost({ request, env }) {
         await env.surveyforge
           .prepare(`
             UPDATE surveys 
-            SET title = ?, description = ?, questions = ?, story = ?, status = ?, updated_at = ?
+            SET title = ?, description = ?, questions = ?, story = ?, status = ?, folder_id = ?, updated_at = ?
             WHERE survey_id = ?
           `)
           .bind(
@@ -78,6 +81,7 @@ export async function onRequestPost({ request, env }) {
             questionsText,
             storyText,
             statusValue,
+            folderIdValue,
             updatedAt,
             survey_id
           )
@@ -103,7 +107,8 @@ async function ensureTables(env) {
         description TEXT,
         questions TEXT,
         story TEXT,
-        status TEXT DEFAULT 'draft',     -- ★ status 컬럼 포함 확인
+        status TEXT DEFAULT 'draft',
+        folder_id TEXT,
         created_at TEXT,
         updated_at TEXT
       )

@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentMoveSurveyId = null;
     }
 
-    function applyMoveFolder() {
+    async function applyMoveFolder() {
         if (!currentMoveSurveyId) {
             closeMoveFolderModal();
             return;
@@ -61,14 +61,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const folderId = select.value;
         const survey = state.surveyMap.get(currentMoveSurveyId);
         if (survey) {
-            survey.folderId = folderId || null;
+            const newFolderId = folderId || null;
+            survey.folderId = newFolderId;
+            renderFolders();
+            renderSurveys();
+            try {
+                await API.updateSurveyFolder(survey.id, newFolderId);
+            } catch (e) {
+                console.error('설문 폴더 이동 중 오류', e);
+                alert('설문 폴더를 이동하는 중 오류가 발생했습니다. 페이지를 새로고침해 주세요.');
+            }
         }
-        renderFolders();
-        renderSurveys();
         closeMoveFolderModal();
     }
 
-    // No persistence; folders are in-memory defaults only
     const API = {
         async getSurveys() {
             const res = await fetch('/api/surveys', { method: 'GET' });
@@ -93,6 +99,43 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (!res.ok) throw new Error(`PATCH /api/surveys/${id} ${res.status}`);
             return res.json();
+        },
+        async updateSurveyFolder(id, folderId) {
+            const res = await fetch(`/api/surveys/${encodeURIComponent(id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ folder_id: folderId })
+            });
+            if (!res.ok) throw new Error(`PATCH /api/surveys/${id} ${res.status}`);
+            return res.json();
+        },
+        async getFolders() {
+            const res = await fetch('/api/folders', { method: 'GET' });
+            if (!res.ok) throw new Error(`GET /api/folders ${res.status}`);
+            return res.json();
+        },
+        async createFolder(folder) {
+            const res = await fetch('/api/folders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(folder)
+            });
+            if (!res.ok) throw new Error(`POST /api/folders ${res.status}`);
+            return res.json();
+        },
+        async updateFolder(id, payload) {
+            const res = await fetch(`/api/folders/${encodeURIComponent(id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error(`PATCH /api/folders/${id} ${res.status}`);
+            return res.json();
+        },
+        async deleteFolder(id) {
+            const res = await fetch(`/api/folders/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error(`DELETE /api/folders/${id} ${res.status}`);
+            return res.json();
         }
     };
 
@@ -109,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function init() {
-        loadFolders();
+        await loadFolders();
         await refreshSurveys();
         renderFolders();
         renderSurveys();
@@ -129,16 +172,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Kick off initial load and rendering
     init();
 
-    function loadFolders() {
+    async function loadFolders() {
         state.folders = getDefaultFolders();
         state.folderMap.clear();
         state.folders.forEach(folder => state.folderMap.set(folder.id, folder));
+
+        try {
+            const remoteFolders = await API.getFolders();
+            if (Array.isArray(remoteFolders)) {
+                remoteFolders.forEach(row => {
+                    if (!row?.id || state.folderMap.has(row.id)) return;
+                    const f = {
+                        id: row.id,
+                        name: row.name,
+                        icon: row.icon || '📁',
+                        color: row.color || '#4a6baf'
+                    };
+                    state.folders.push(f);
+                    state.folderMap.set(f.id, f);
+                });
+            }
+        } catch (e) {
+            console.error('폴더 목록을 불러오는 중 오류', e);
+        }
+
         if (!state.folders || state.folders.length === 0) {
-            state.folders = [
-                { id: 'all', name: '모든 설문', icon: '📋', color: '#4a6baf' },
-                { id: 'draft', name: '작성 중', icon: '✏️', color: '#f39c12' },
-                { id: 'active', name: '배포 중', icon: '🚀', color: '#27ae60' }
-            ];
+            state.folders = getDefaultFolders();
+            state.folderMap.clear();
+            state.folders.forEach(folder => state.folderMap.set(folder.id, folder));
         }
     }
 
@@ -193,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     }
 
-    function saveFolders() { /* no-op (no persistence) */ }
+    function saveFolders() { /* 폴더 수정은 개별 API 호출에서 처리하므로 여기서는 별도 동작 없음 */ }
 
     function renderFolders() {
         const folderList = document.getElementById('folderList');
@@ -263,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
             el.addEventListener('dragleave', () => {
                 el.classList.remove('drag-over-folder');
             });
-            el.addEventListener('drop', (e) => {
+            el.addEventListener('drop', async (e) => {
                 e.preventDefault();
                 el.classList.remove('drag-over-folder');
                 const surveyId = e.dataTransfer.getData('surveyId');
@@ -273,6 +334,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 survey.folderId = folder.id;
                 renderFolders();
                 renderSurveys();
+                try {
+                    await API.updateSurveyFolder(survey.id, folder.id);
+                } catch (err) {
+                    console.error('드래그 이동 중 설문 폴더 업데이트 오류', err);
+                    alert('설문 폴더를 이동하는 중 오류가 발생했습니다. 페이지를 새로고침해 주세요.');
+                }
             });
         }
 
@@ -614,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('folderNameInput').value = '';
     }
 
-    function createFolder() {
+    async function createFolder() {
         const name = document.getElementById('folderNameInput').value.trim();
         if (!name) {
             alert('폴더 이름을 입력해주세요.');
@@ -628,43 +695,60 @@ document.addEventListener('DOMContentLoaded', () => {
             color: '#4a6baf'
         };
 
-        state.folders.push(folder);
-        state.folderMap.set(folder.id, folder);
-        saveFolders();
-        renderFolders();
-        closeAddFolderModal();
+        try {
+            await API.createFolder(folder);
+            state.folders.push(folder);
+            state.folderMap.set(folder.id, folder);
+            renderFolders();
+            closeAddFolderModal();
+        } catch (e) {
+            console.error('폴더 생성 중 오류', e);
+            alert('폴더를 생성하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        }
     }
 
-    function renameFolder(folderId) {
+    async function renameFolder(folderId) {
         const folder = state.folderMap.get(folderId);
         if (!folder) return;
 
         const newName = prompt('새 폴더 이름:', folder.name);
         if (newName && newName.trim()) {
-            folder.name = newName.trim();
-            saveFolders();
-            renderFolders();
+            const trimmed = newName.trim();
+            folder.name = trimmed;
+            try {
+                await API.updateFolder(folderId, { name: trimmed });
+                renderFolders();
+            } catch (e) {
+                console.error('폴더 이름 변경 중 오류', e);
+                alert('폴더 이름을 변경하는 중 오류가 발생했습니다.');
+            }
         }
     }
 
-    function deleteFolder(folderId) {
+    async function deleteFolder(folderId) {
         if (!confirm('이 폴더를 삭제하시겠습니까? (폴더 내 설문은 유지됩니다)')) {
             return;
         }
 
-        state.folders = state.folders.filter(f => f.id !== folderId);
-        state.folderMap.delete(folderId);
-        
-        // Move surveys in this folder to 'all'
-        state.surveys.forEach(survey => {
-            if (survey.folderId === folderId) {
-                survey.folderId = null;
-            }
-        });
+        try {
+            await API.deleteFolder(folderId);
 
-        saveFolders();
-        renderFolders();
-        renderSurveys();
+            state.folders = state.folders.filter(f => f.id !== folderId);
+            state.folderMap.delete(folderId);
+            
+            // Move surveys in this folder to 'all' (DB는 API에서 이미 NULL 처리)
+            state.surveys.forEach(survey => {
+                if (survey.folderId === folderId) {
+                    survey.folderId = null;
+                }
+            });
+
+            renderFolders();
+            renderSurveys();
+        } catch (e) {
+            console.error('폴더 삭제 중 오류', e);
+            alert('폴더를 삭제하는 중 오류가 발생했습니다.');
+        }
     }
 
     function editSurvey(surveyId) {
