@@ -148,7 +148,7 @@
         }
 
         .text-input {
-            width: 100%;
+            width: calc(100% - 32px);   /* 좌우 16px씩 여백 확보 */
             padding: 14px 16px;
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.8);
@@ -156,7 +156,7 @@
             color: #fff;
             font-size: 1.1rem;
             box-sizing: border-box;
-            margin-bottom: 16px;
+            margin: 0 16px 16px;        /* 좌우 16px, 아래 16px */
             outline: none;
         }
 
@@ -185,9 +185,10 @@
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(106, 90, 205, 0.4);
             transition: all 0.2s ease;
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box; /* 패딩을 포함해 입력창과 동일한 좌우 폭 유지 */
+            width: calc(100% - 32px);   /* 입력창과 동일 폭 */
+            max-width: none;
+            box-sizing: border-box;
+            margin: 0 16px;             /* 좌우 16px */
         }
 
         .submit-btn:hover {
@@ -331,9 +332,6 @@
             .text-input {
                 font-size: 0.95rem; /* ~15px */
                 padding: 12px 14px;
-                width: 100%;
-                max-width: 100%;
-                margin: 0 auto;          /* 좌우 대칭 중앙 정렬 */
             }
             .text-input::placeholder {
                 font-size: 0.95rem;
@@ -343,17 +341,11 @@
                 font-size: 1.05rem; /* ~17px */
                 line-height: 1.35;
                 white-space: normal;
-                width: 100%;
-                max-width: 100%;
-                margin: 0 auto;         /* 중앙 정렬 */
             }
             .submit-btn {
                 font-size: 1.05rem; /* ~17px */
                 padding: 14px 0;
                 border-radius: 12px;
-                width: 100%;
-                max-width: 100%;
-                margin: 0 auto;          /* 좌우 대칭 중앙 정렬 */
             }
         }
 
