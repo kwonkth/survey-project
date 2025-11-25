@@ -1142,8 +1142,8 @@ textarea.form-control {
     background-color: var(--primary-dark);
 }
 
-.share-link-icon-btn {
-    background-color: #4a6baf;
+.share-link button.share-link-icon-btn {
+    background-color: #4a6baf; /* 설문관리 파란색으로 강제 */
     color: #ffffff;
     border: none;
     display: flex;
@@ -1153,8 +1153,8 @@ textarea.form-control {
     padding: 0 0.9rem;
 }
 
-.share-link-icon-btn:hover {
-    background-color: #3a5a9a;
+.share-link button.share-link-icon-btn:hover {
+    background-color: #3a5a9a; /* hover 시도 동일 계열 */
 }
 
 .qr-code {

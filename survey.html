@@ -63,7 +63,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center; /* 가로 기준으로도 가운데 정렬 */
-            padding: 16px 0;
+            padding: 16px 16px;  /* 좌우 16px 패딩을 주어 기기 프레임 안쪽에 여백 확보 */
         }
         
         #text-box {
@@ -298,8 +298,8 @@
 
             #game-container {
                 justify-content: flex-start;
-                padding-top: 80px; /* 상단 헤더 높이만큼 여백 */
-                padding-bottom: 32px;
+                /* 상단 헤더 높이 + 좌우 16px 패딩 + 하단 여백 */
+                padding: 80px 16px 32px;
             }
 
             #text-box {
